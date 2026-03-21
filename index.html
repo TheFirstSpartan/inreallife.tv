@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPACECLONE - Access Portal</title>
+    <title>INREALLIFE - Access Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
@@ -14,8 +14,9 @@
             --neo-yellow: #facc15;
             --neo-red: #ef4444;
             --neo-green: #22c55e;
-            --neo-orange: #f97316;
+            --neo-pink: #ff00ff;
             --neo-purple: #a855f7;
+            --neo-orange: #f97316;
         }
 
         body {
@@ -44,98 +45,35 @@
             width: 100%;
             position: relative;
             margin-bottom: 20px;
+            overflow: hidden;
         }
-
-        .neo-header {
-            border-bottom: var(--border-thick) solid black;
-            padding: 8px 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.65rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .bg-blue-header { background-color: var(--neo-blue); color: white; }
-        .bg-red-header { background-color: var(--neo-red); color: white; }
-        .bg-green-header { background-color: var(--neo-green); color: black; }
-        .bg-yellow-header { background-color: var(--neo-yellow); color: black; }
 
         .neo-btn {
             border: var(--border-thick) solid black;
-            padding: 10px;
+            padding: 8px;
             font-weight: bold;
             font-family: 'Press Start 2P', cursive;
-            font-size: 0.6rem;
+            font-size: 0.55rem;
             cursor: pointer;
             box-shadow: 3px 3px 0px 0px black;
             text-transform: uppercase;
-            transition: all 0.1s;
+            transition: transform 0.1s;
         }
 
-        .neo-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px 0px black; }
-
-        .view-section { display: none; }
-        .view-active { display: block; }
-
-        /* Music Player Styling */
-        .music-bar {
-            background: #1f2937;
-            color: var(--neo-green);
-            padding: 12px;
-            border: var(--border-thick) solid black;
-            box-shadow: 4px 4px 0px black;
-            font-size: 0.75rem;
-            margin-bottom: 20px;
-        }
-
-        .progress-bg { background: #374151; height: 10px; margin-top: 10px; position: relative; }
-        .progress-fill { background: var(--neo-green); height: 100%; width: 65%; }
-
-        /* Friends Grid */
-        .friends-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 25px;
-            padding: 20px 15px;
-        }
-
-        .rank-label {
-            background: black;
-            color: white;
-            font-size: 0.45rem;
-            padding: 3px 8px;
-            display: inline-block;
-            margin-bottom: 6px;
-            font-family: 'Press Start 2P', cursive;
-        }
-
-        .friend-card { text-align: center; }
-        .friend-box {
-            width: 100%;
-            aspect-ratio: 1/1;
-            border: var(--border-thick) solid black;
-            box-shadow: 6px 6px 0px black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.8rem;
-            color: white;
-            text-shadow: 2px 2px 0px black;
-            margin-bottom: 10px;
+        .neo-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px 0px black;
         }
 
         .neo-input {
             border: 3px solid black;
-            padding: 8px;
+            padding: 10px;
             width: 100%;
             font-family: 'Courier Prime', monospace;
             font-weight: bold;
             outline: none;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+            background: #f9fafb;
         }
 
         #loadingOverlay {
@@ -145,150 +83,376 @@
             background: black; color: var(--neo-green);
             z-index: 2000; justify-content: center; align-items: center;
             font-family: 'Press Start 2P', cursive; font-size: 0.8rem;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .status-bar {
+            background: #000;
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.55rem;
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .arcade-box-flash {
+            animation: arcadeBoxFlash 0.5s infinite steps(1);
+        }
+
+        @keyframes arcadeBoxFlash {
+            0% { background-color: #ffffff; }
+            16.6% { background-color: #0056b3; }
+            33.3% { background-color: #ef4444; }
+            50% { background-color: #22c55e; }
+            66.6% { background-color: #facc15; }
+            83.3% { background-color: #ff8c00; }
+        }
+
+        .pixel-text {
+            font-family: 'Press Start 2P', cursive;
+            color: black !important;
+            text-shadow: 2px 2px 0px white;
+        }
+
+        .marquee-container {
+            background: var(--neo-yellow);
+            border: var(--border-thick) solid black;
+            padding: 8px;
+            overflow: hidden;
+            white-space: nowrap;
+            margin-bottom: 20px;
+            box-shadow: 4px 4px 0px black;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7rem;
+            animation: marquee 15s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        .music-player {
+            background: #1a1a1a;
+            color: var(--neo-green);
+            padding: 15px;
+            border: var(--border-thick) solid black;
+            box-shadow: 4px 4px 0px black;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background: #333;
+            margin-top: 10px;
+            border: 2px solid black;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--neo-green);
+            width: 65%;
+        }
+
+        .friend-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 15px;
+        }
+
+        .friend-card {
+            text-align: center;
+        }
+
+        .friend-box {
+            aspect-ratio: 1/1;
+            border: var(--border-thick) solid black;
+            box-shadow: 4px 4px 0px black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Press Start 2P', cursive;
+            color: white;
+            text-shadow: 2px 2px 0px black;
+            font-size: 0.6rem;
+            margin-bottom: 8px;
+        }
+
+        .view-section { display: none; }
+        .view-active { display: block; }
+
+        .toggle-link {
+            font-size: 10px;
+            text-align: center;
+            display: block;
+            margin-top: 15px;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .shimmer {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
     </style>
 </head>
 <body>
 
     <div id="appContainer">
-        <div id="loadingOverlay">UPLINKING...</div>
+        <div id="loadingOverlay">
+            <div>
+                <div class="animate-pulse mb-4" id="overlayText">UPLINKING...</div>
+                <div class="text-[10px]" id="overlaySubtext">PLEASE STAND BY</div>
+            </div>
+        </div>
 
         <!-- LOGIN VIEW -->
         <div id="loginView" class="view-section view-active">
-            <div class="neo-box bg-[#0056b3] text-white p-6 text-center mb-4">
-                <h1 class="text-3xl font-bold tracking-tighter" style="font-family: 'Press Start 2P'">SPACECLONE</h1>
+            <div class="status-bar">
+                <span>SYSTEM DIAGNOSTIC</span>
+                <span id="connTag" class="flex items-center">
+                    <span id="dbStatusDot" class="status-dot bg-yellow-500"></span>
+                    <span id="dbStatusText" class="text-yellow-500">READY</span>
+                </span>
+            </div>
+
+            <div class="neo-box arcade-box-flash p-8 text-center mb-4 mt-4">
+                <h1 class="text-2xl font-bold tracking-tighter pixel-text">INREALLIFE</h1>
+                <p class="text-[10px] mt-4 opacity-70 uppercase font-bold text-black">NEO-GEO PROTOCOL v2.02</p>
             </div>
             
-            <form id="loginForm" class="neo-box p-6">
-                <div class="mb-4">
-                    <label class="block font-bold text-xs mb-1">E-MAIL</label>
-                    <input type="email" class="neo-input" value="pilot@spaceclone.net">
+            <form id="authForm" class="neo-box p-6">
+                <div class="mb-6">
+                    <label class="block font-bold text-xs mb-2 uppercase">Pilot ID (Email)</label>
+                    <input type="email" id="emailInput" class="neo-input" placeholder="pilot@inreallife.net" required autocomplete="username">
                 </div>
-                <div class="mb-4">
-                    <label class="block font-bold text-xs mb-1">PASSKEY</label>
-                    <input type="password" class="neo-input" value="password">
+                <div class="mb-8">
+                    <label class="block font-bold text-xs mb-2 uppercase">Security Passkey</label>
+                    <input type="password" id="passInput" class="neo-input" placeholder="********" required minlength="6" autocomplete="current-password">
                 </div>
-                <button type="submit" class="neo-btn bg-yellow-400 w-full">ACCESS PORTAL</button>
+                <button type="submit" id="submitBtn" class="neo-btn bg-yellow-400 w-full" style="font-size: 0.8rem;">LOGIN</button>
+                <div class="toggle-link" id="toggleAuth">NEED AN ACCOUNT? SIGN UP</div>
             </form>
         </div>
 
-        <!-- HOME VIEW -->
-        <div id="homeView" class="view-section">
-            <!-- Header Branding -->
-            <div class="neo-box bg-[#0056b3] text-white py-8 text-center mb-4">
-                <h1 class="text-3xl font-bold tracking-tighter" style="font-family: 'Press Start 2P'">SPACECLONE</h1>
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboardView" class="view-section">
+            <div class="neo-box bg-[#0056b3] text-white p-6 text-center mb-4">
+                <h1 class="text-2xl font-bold tracking-widest pixel-text" style="color: white !important;">SPACECLONE</h1>
             </div>
 
-            <!-- Profile Area -->
+            <div class="grid grid-cols-4 gap-2 mb-6">
+                <button class="neo-btn bg-yellow-400">HOME</button>
+                <button class="neo-btn bg-red-500 text-white">MAIL</button>
+                <button class="neo-btn bg-green-500">BLOG</button>
+                <button id="logoutBtn" class="neo-btn bg-white">LOGOUT</button>
+            </div>
+
+            <div class="marquee-container">
+                <div class="marquee-text">★ SPREAD THE WORD: SPACECLONE ★ NO ADS, ALL VIBES ★ JOIN THE CREW ★</div>
+            </div>
+
             <div class="neo-box p-6 text-center">
-                <div class="neo-box mx-auto w-48 aspect-square bg-[#ff00ff] flex items-center justify-center mb-4">
-                     <svg viewBox="0 0 100 100" class="w-3/4 h-3/4">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <span class="font-bold text-[10px]">== ME ==</span>
+                    <span class="font-bold text-[10px]">X</span>
+                </div>
+                <div class="neo-box mx-auto w-40 aspect-square bg-pink-500 flex items-center justify-center mb-4">
+                     <svg viewBox="0 0 100 100" class="w-full h-full">
                         <circle cx="50" cy="40" r="22" fill="white" stroke="black" stroke-width="6" />
                         <path d="M15 95 Q50 60 85 95" fill="white" stroke="black" stroke-width="6" />
                     </svg>
                 </div>
-                <div class="text-[10px] font-bold text-gray-400">● ONLINE NOW</div>
-            </div>
-
-            <!-- Spread the Word -->
-            <div class="neo-box">
-                <div class="neo-header bg-red-header">SPREAD THE WORD !</div>
-                <div class="p-4 text-center">
-                    <div class="text-[10px] font-bold text-red-500 mb-2 uppercase">Invite your crew!</div>
-                    <div class="flex border-2 border-black">
-                        <input type="text" readonly value="spaceclone.com/u/pixelvibe" class="flex-1 p-2 text-[10px] font-bold bg-white outline-none">
-                        <button class="bg-yellow-400 px-3 py-1 font-bold text-[10px] border-l-2 border-black">COPY</button>
-                    </div>
+                <div id="userNameDisp" class="font-bold text-xl mb-1 tracking-tighter">_ Pilot _</div>
+                <div class="flex items-center justify-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shimmer"></span>
+                    <span class="text-[10px] font-bold text-gray-500 uppercase">Online Now</span>
                 </div>
             </div>
 
-            <!-- Find Friends -->
-            <div class="neo-box">
-                <div class="neo-header bg-green-header">FIND FRIENDS</div>
-                <div class="p-4">
-                    <div class="flex gap-2">
-                        <input type="text" placeholder="User ID..." class="neo-input flex-1">
-                        <button class="neo-btn bg-black text-white px-4">GO!</button>
-                    </div>
+            <div class="neo-box bg-red-500 p-4">
+                <div class="text-white font-bold text-[10px] mb-2 text-center" style="font-family: 'Press Start 2P'">SPREAD THE WORD !</div>
+                <div class="text-white text-[10px] text-center mb-2">Invite your crew!</div>
+                <div class="bg-white border-2 border-black p-2 flex items-center justify-between">
+                    <span id="inviteLink" class="text-[10px] font-bold overflow-hidden truncate">spaceclone.com/u/pilot</span>
+                    <button class="bg-yellow-400 border-2 border-black text-[8px] font-bold px-2 py-1">COPY</button>
                 </div>
             </div>
 
-            <!-- Music Player -->
-            <div class="music-bar">
-                <div class="flex justify-between items-center">
-                    <div class="flex items-center gap-2">
-                        <span class="text-[8px]">▶</span>
-                        <span class="text-[10px] font-bold">NOW PLAYING</span>
-                    </div>
-                    <span class="text-[10px] opacity-70">02:45</span>
+            <div class="neo-box bg-green-500 p-4">
+                <div class="text-black font-bold text-[10px] mb-2" style="font-family: 'Press Start 2P'">FIND FRIENDS</div>
+                <div class="flex gap-2">
+                    <input type="text" class="neo-input h-8 text-xs" placeholder="User ID...">
+                    <button class="neo-btn bg-black text-white text-[8px] px-4">GO!</button>
                 </div>
-                <div class="font-bold text-xs mt-1">Da Rude - Sandstorm</div>
-                <div class="progress-bg">
+            </div>
+
+            <div class="music-player mb-6">
+                <div class="flex justify-between items-center text-[10px] mb-2">
+                    <span class="text-green-500">▶ NOW PLAYING</span>
+                    <span>02:45</span>
+                </div>
+                <div class="font-bold text-sm tracking-tight text-green-400">Da Rude - Sandstorm</div>
+                <div class="progress-bar">
                     <div class="progress-fill"></div>
                 </div>
             </div>
 
-            <!-- Status -->
             <div class="neo-box">
-                <div class="neo-header bg-blue-header text-white">STATUS & VIBE</div>
-                <div class="p-6 text-sm leading-relaxed">
-                    <p><strong>Status:</strong> Tell everyone to join SpaceClone! We're bringing the old web back. <b>Zero ads, all vibes.</b></p>
-                    <div class="my-6 border-t-2 border-dashed border-black"></div>
-                    <p><strong>Interest:</strong> Anime, HTML 4.0, DDR, Energy drinks.</p>
+                <div class="bg-blue-600 border-b-4 border-black p-2 text-white font-bold text-[10px]" style="font-family: 'Press Start 2P'">STATUS & VIBE</div>
+                <div class="p-4 space-y-4">
+                    <div class="text-xs leading-relaxed">
+                        <span class="font-bold">Status:</span> Tell everyone to join SpaceClone! We're bringing the old web back. <strong>Zero ads, all vibes.</strong>
+                    </div>
+                    <div class="border-t-2 border-dashed border-black pt-4 text-xs">
+                        <span class="font-bold">Interest:</span> Anime, HTML 4.0, DDR, Energy drinks.
+                    </div>
                 </div>
             </div>
 
-            <!-- Top 8 -->
             <div class="neo-box">
-                <div class="neo-header bg-green-header">MY TOP 8 FRIENDS</div>
-                <div class="friends-grid">
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #1</span>
-                        <div class="friend-box bg-red-500">TOM</div>
-                        <span class="text-[10px] font-bold">SpaceClone</span>
-                    </div>
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #2</span>
-                        <div class="friend-box bg-blue-600">NEO</div>
-                        <span class="text-[10px] font-bold">The_One</span>
-                    </div>
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #3</span>
-                        <div class="friend-box bg-yellow-400 text-black">GURL</div>
-                        <span class="text-[10px] font-bold">Sk8er_X</span>
-                    </div>
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #4</span>
-                        <div class="friend-box bg-purple-600">GHOST</div>
-                        <span class="text-[10px] font-bold">InShell</span>
-                    </div>
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #5</span>
-                        <div class="friend-box bg-green-500">TRIN</div>
-                        <span class="text-[10px] font-bold">Matrix</span>
-                    </div>
-                    <div class="friend-card">
-                        <span class="rank-label">RANK #6</span>
-                        <div class="friend-box bg-orange-500">VAULT</div>
-                        <span class="text-[10px] font-bold">Dweller</span>
-                    </div>
-                </div>
+                <div class="bg-green-500 border-b-4 border-black p-2 text-center font-bold text-[10px]" style="font-family: 'Press Start 2P'">MY TOP 8 FRIENDS</div>
+                <div id="friendsGrid" class="friend-grid"></div>
             </div>
         </div>
     </div>
 
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.style.display = 'flex';
-            setTimeout(() => {
-                document.getElementById('loginView').classList.remove('view-active');
-                document.getElementById('homeView').classList.add('view-active');
-                overlay.style.display = 'none';
-                window.scrollTo(0, 0);
-            }, 1000);
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : "irl-tv-web";
+
+        const overlay = document.getElementById('loadingOverlay');
+        const overlayText = document.getElementById('overlayText');
+        const loginView = document.getElementById('loginView');
+        const dashboardView = document.getElementById('dashboardView');
+        const userNameDisp = document.getElementById('userNameDisp');
+        const inviteLink = document.getElementById('inviteLink');
+
+        const top8Data = [
+            { name: "TOM", handle: "SpaceClone", color: "bg-red-500" },
+            { name: "NEO", handle: "The_One", color: "bg-blue-600" },
+            { name: "GURL", handle: "Sk8er_X", color: "bg-yellow-400" },
+            { name: "GHOST", handle: "InShell", color: "bg-purple-600" },
+            { name: "TRIN", handle: "Oracle", color: "bg-green-500" },
+            { name: "VAULT", handle: "Boy1337", color: "bg-orange-500" },
+            { name: "MAI", handle: "KOF_98", color: "bg-red-400" },
+            { name: "RYU", handle: "StreetF", color: "bg-gray-200" }
+        ];
+
+        function renderTop8() {
+            const grid = document.getElementById('friendsGrid');
+            grid.innerHTML = top8Data.map((f, i) => `
+                <div class="friend-card">
+                    <div class="rank-label bg-black text-white text-[7px] px-2 py-1 inline-block mb-1">RANK #${i+1}</div>
+                    <div class="friend-box ${f.color}">${f.name}</div>
+                    <div class="text-[9px] font-bold">${f.handle}</div>
+                </div>
+            `).join('');
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                const handle = (user.email ? user.email.split('@')[0] : 'Guest_' + user.uid.slice(0, 4));
+                userNameDisp.innerText = `_ ${handle} _`;
+                inviteLink.innerText = `spaceclone.com/u/${handle}`;
+                
+                loginView.classList.remove('view-active');
+                dashboardView.classList.add('view-active');
+                renderTop8();
+
+                document.getElementById('dbStatusDot')?.classList.replace('bg-yellow-500', 'bg-green-500');
+                if(document.getElementById('dbStatusText')) document.getElementById('dbStatusText').innerText = "UPLINK: STABLE";
+            } else {
+                dashboardView.classList.remove('view-active');
+                loginView.classList.add('view-active');
+                document.getElementById('dbStatusDot')?.classList.replace('bg-green-500', 'bg-yellow-500');
+                if(document.getElementById('dbStatusText')) document.getElementById('dbStatusText').innerText = "READY";
+            }
         });
+
+        document.getElementById('authForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailInput').value;
+            const pass = document.getElementById('passInput').value;
+            const isLogin = document.getElementById('submitBtn').innerText === "LOGIN";
+
+            overlay.style.display = 'flex';
+            overlayText.innerText = isLogin ? "UPLINKING..." : "CREATING PILOT...";
+
+            try {
+                if (isLogin) {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                } else {
+                    try {
+                        const res = await createUserWithEmailAndPassword(auth, email, pass);
+                        await setDoc(doc(db, 'artifacts', appId, 'users', res.user.uid, 'profile', 'data'), {
+                            email, handle: email.split('@')[0], joinedAt: new Date().toISOString()
+                        });
+                    } catch (innerErr) {
+                        // Handle auth/operation-not-allowed by falling back to anonymous
+                        if (innerErr.code === 'auth/operation-not-allowed') {
+                            overlayText.innerText = "BYPASSING AUTH...";
+                            await signInAnonymously(auth);
+                        } else {
+                            throw innerErr;
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                overlayText.innerText = "LINK FAILED";
+                overlayText.style.color = "#ef4444";
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    overlayText.style.color = "#22c55e";
+                }, 2000);
+            } finally {
+                if (overlayText.innerText !== "LINK FAILED") {
+                    overlay.style.display = 'none';
+                }
+            }
+        };
+
+        document.getElementById('toggleAuth').onclick = () => {
+            const btn = document.getElementById('submitBtn');
+            const link = document.getElementById('toggleAuth');
+            if (btn.innerText === "LOGIN") {
+                btn.innerText = "SIGN UP";
+                link.innerText = "ALREADY HAVE AN ACCOUNT? LOGIN";
+            } else {
+                btn.innerText = "LOGIN";
+                link.innerText = "NEED AN ACCOUNT? SIGN UP";
+            }
+        };
+
+        document.getElementById('logoutBtn').onclick = () => signOut(auth);
     </script>
 </body>
 </html>
