@@ -9,20 +9,19 @@
     <style>
         :root {
             --border-thick: 4px;
-            --shadow-offset: 6px;
+            --shadow-offset: 5px;
             --neo-blue: #0056b3;
             --neo-yellow: #facc15;
             --neo-red: #ef4444;
             --neo-green: #22c55e;
-            --neo-magenta: #ff00ff;
-            --neo-purple: #a855f7;
             --neo-orange: #f97316;
+            --neo-purple: #a855f7;
         }
 
         body {
-            background-color: #e5e7eb;
-            background-image: radial-gradient(#9ca3af 1.5px, transparent 1.5px);
-            background-size: 20px 20px;
+            background-color: #d1d5db;
+            background-image: radial-gradient(black 2px, transparent 2px);
+            background-size: 24px 24px;
             font-family: 'Courier Prime', monospace;
             margin: 0;
             display: flex;
@@ -30,391 +29,266 @@
             align-items: flex-start;
             min-height: 100vh;
             color: black;
-            padding: 20px;
+            padding: 10px;
         }
 
-        /* Reusable Neo Geo Elements */
+        #appContainer {
+            width: 100%;
+            max-width: 420px;
+        }
+
         .neo-box {
             border: var(--border-thick) solid black;
             box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px black;
             background-color: white;
             width: 100%;
             position: relative;
-            margin-bottom: 25px;
+            margin-bottom: 20px;
         }
 
         .neo-header {
             border-bottom: var(--border-thick) solid black;
-            padding: 12px;
+            padding: 8px 12px;
             font-weight: bold;
             text-transform: uppercase;
-            text-align: center;
             font-family: 'Press Start 2P', cursive;
-            font-size: 0.7rem;
-            text-shadow: 2px 2px 0px black;
+            font-size: 0.65rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .bg-blue-header { background-color: var(--neo-blue); color: white; }
-        .bg-yellow-header { background-color: var(--neo-yellow); color: black; text-shadow: none; }
         .bg-red-header { background-color: var(--neo-red); color: white; }
-        .bg-green-header { background-color: var(--neo-green); color: black; text-shadow: none; }
-        .bg-magenta-header { background-color: var(--neo-magenta); color: white; }
-
-        /* Inputs & Buttons */
-        .neo-input {
-            border: 3px solid black;
-            padding: 10px;
-            width: 100%;
-            font-family: inherit;
-            outline: none;
-            box-shadow: inset 2px 2px 0px rgba(0,0,0,0.1);
-        }
+        .bg-green-header { background-color: var(--neo-green); color: black; }
+        .bg-yellow-header { background-color: var(--neo-yellow); color: black; }
 
         .neo-btn {
-            width: 100%;
             border: var(--border-thick) solid black;
-            padding: 12px;
+            padding: 10px;
             font-weight: bold;
             font-family: 'Press Start 2P', cursive;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             cursor: pointer;
-            box-shadow: 4px 4px 0px 0px black;
+            box-shadow: 3px 3px 0px 0px black;
             text-transform: uppercase;
-            margin-top: 10px;
             transition: all 0.1s;
         }
 
-        .neo-btn:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px 0px black;
-        }
-
-        /* Animations */
-        .blink { animation: blinker 1s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
-
-        @keyframes levitate {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-15px); }
-            100% { transform: translateY(0); }
-        }
-
-        .levitating-avatar {
-            animation: levitate 3s ease-in-out infinite;
-        }
-
-        /* View Control */
-        #appContainer {
-            width: 100%;
-            max-width: 500px;
-        }
+        .neo-btn:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0px 0px black; }
 
         .view-section { display: none; }
         .view-active { display: block; }
 
-        /* Home Specific Styles */
-        .marquee-container {
-            overflow: hidden;
-            white-space: nowrap;
-            padding: 10px 0;
-            background: var(--neo-yellow);
+        /* Music Player Styling */
+        .music-bar {
+            background: #1f2937;
+            color: var(--neo-green);
+            padding: 12px;
             border: var(--border-thick) solid black;
+            box-shadow: 4px 4px 0px black;
+            font-size: 0.75rem;
             margin-bottom: 20px;
-            font-weight: bold;
         }
 
-        .marquee-text {
-            display: inline-block;
-            animation: scroll 15s linear infinite;
-        }
+        .progress-bg { background: #374151; height: 10px; margin-top: 10px; position: relative; }
+        .progress-fill { background: var(--neo-green); height: 100%; width: 65%; }
 
-        @keyframes scroll {
-            from { transform: translateX(100%); }
-            to { transform: translateX(-100%); }
-        }
-
-        .nav-button {
-            padding: 8px 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            border: var(--border-thick) solid black;
-            box-shadow: 3px 3px 0px 0px black;
-            cursor: pointer;
-            font-size: 0.7rem;
-            background: white;
-            transition: transform 0.1s;
-        }
-        .nav-button:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px black; }
-
+        /* Friends Grid */
         .friends-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 15px;
+            gap: 25px;
+            padding: 20px 15px;
         }
 
-        .friend-avatar {
+        .rank-label {
+            background: black;
+            color: white;
+            font-size: 0.45rem;
+            padding: 3px 8px;
+            display: inline-block;
+            margin-bottom: 6px;
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .friend-card { text-align: center; }
+        .friend-box {
             width: 100%;
             aspect-ratio: 1/1;
             border: var(--border-thick) solid black;
-            box-shadow: 3px 3px 0px black;
+            box-shadow: 6px 6px 0px black;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
             color: white;
-            font-weight: bold;
             text-shadow: 2px 2px 0px black;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        .neo-input {
+            border: 3px solid black;
+            padding: 8px;
+            width: 100%;
+            font-family: 'Courier Prime', monospace;
+            font-weight: bold;
+            outline: none;
+            font-size: 0.8rem;
         }
 
         #loadingOverlay {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            color: var(--neo-green);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.8rem;
-            text-align: center;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: black; color: var(--neo-green);
+            z-index: 2000; justify-content: center; align-items: center;
+            font-family: 'Press Start 2P', cursive; font-size: 0.8rem;
         }
-
-        /* Mail Specific */
-        .mail-item {
-            border-bottom: 2px solid black;
-            padding: 10px;
-            cursor: pointer;
-        }
-        .mail-item:hover { background: #f3f4f6; }
-        .mail-unread { font-weight: bold; border-left: 8px solid var(--neo-red); }
     </style>
 </head>
 <body>
 
     <div id="appContainer">
-        <!-- Overlay -->
-        <div id="loadingOverlay">
-            SYNCING DATA...<br><br>
-            <span class="blink">PLEASE WAIT</span>
-        </div>
+        <div id="loadingOverlay">UPLINKING...</div>
 
         <!-- LOGIN VIEW -->
         <div id="loginView" class="view-section view-active">
-            <div class="neo-box">
-                <div class="neo-header bg-blue-header">SPACECLONE LOGIN</div>
-                <div class="p-8">
-                    <div class="text-center mb-6">
-                        <span class="bg-black text-white px-2 py-1 text-xs blink">INSERT CREDENTIALS</span>
-                    </div>
-                    <form id="loginForm">
-                        <div class="input-group mb-4">
-                            <label>E-MAIL</label>
-                            <input type="email" class="neo-input" value="pilot@spaceclone.net" required>
-                        </div>
-                        <div class="input-group mb-4">
-                            <label>PASSKEY</label>
-                            <input type="password" class="neo-input" value="password123" required>
-                        </div>
-                        <button type="submit" class="neo-btn" style="background: var(--neo-yellow)">ACCESS PORTAL</button>
-                    </form>
-                    <div class="mt-6 text-center text-sm">
-                        New user? <span class="text-blue-600 underline font-bold cursor-pointer" onclick="switchView('registerView')">CREATE PILOT ID</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- REGISTER VIEW -->
-        <div id="registerView" class="view-section">
-            <div class="neo-box">
-                <div class="neo-header bg-magenta-header">NEW REGISTRATION</div>
-                <div class="p-8">
-                    <form id="registerForm">
-                        <div class="input-group mb-4">
-                            <label>CALLSIGN</label>
-                            <input type="text" class="neo-input" placeholder="User_Name" required>
-                        </div>
-                        <div class="input-group mb-4">
-                            <label>E-MAIL</label>
-                            <input type="email" class="neo-input" required>
-                        </div>
-                        <div class="input-group mb-4">
-                            <label>PASSKEY</label>
-                            <input type="password" class="neo-input" required>
-                        </div>
-                        <button type="submit" class="neo-btn" style="background: var(--neo-magenta); color: white;">INITIALIZE ID</button>
-                    </form>
-                    <div class="mt-6 text-center text-sm">
-                        <span class="text-blue-600 underline font-bold cursor-pointer" onclick="switchView('loginView')">BACK TO LOGIN</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- HOME VIEW (THE ACTUAL APP) -->
-        <div id="homeView" class="view-section">
-            <div class="neo-box bg-blue-header py-6 text-center" style="font-family: 'Press Start 2P'; font-size: 1.2rem;">
-                SPACECLONE
-            </div>
-
-            <div class="flex flex-wrap justify-center gap-3 mb-6">
-                <div class="nav-button" style="background: var(--neo-yellow)" onclick="switchView('homeView')">Home</div>
-                <div class="nav-button" style="background: var(--neo-red); color: white;" onclick="switchView('mailView')">Mail</div>
-                <div class="nav-button" style="background: var(--neo-green)" onclick="switchView('blogView')">Blog</div>
-                <div class="nav-button" onclick="location.reload()">Logout</div>
-            </div>
-
-            <div class="marquee-container">
-                <div class="marquee-text">★ WELCOME BACK PILOT ★ SPACECLONE IS ONLINE ★ ZERO ADS ★ ALL VIBES ★</div>
-            </div>
-
-            <!-- Profile Summary -->
-            <div class="neo-box">
-                <div class="neo-header bg-yellow-header">== ME ==</div>
-                <div class="p-8 text-center">
-                    <div class="text-2xl font-bold mb-8">_ PixelVibe _</div>
-                    <div class="neo-box mx-auto w-48 aspect-square levitating-avatar" style="background-color: var(--neo-magenta);">
-                        <svg viewBox="0 0 100 100" class="w-full h-full p-4">
-                            <circle cx="50" cy="40" r="22" fill="white" stroke="black" stroke-width="6" />
-                            <path d="M15 95 Q50 60 85 95" fill="white" stroke="black" stroke-width="6" />
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Friends -->
-            <div class="neo-box">
-                <div class="neo-header bg-green-header">TOP 8 FRIENDS</div>
-                <div class="friends-grid">
-                    <div class="text-center">
-                        <div class="friend-avatar" style="background: var(--neo-red)">TOM</div>
-                        <span class="text-xs font-bold">SpaceClone</span>
-                    </div>
-                    <div class="text-center">
-                        <div class="friend-avatar" style="background: var(--neo-blue)">NEO</div>
-                        <span class="text-xs font-bold">The_One</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- MAIL VIEW -->
-        <div id="mailView" class="view-section">
-            <div class="neo-box bg-red-header py-4 text-center" style="font-family: 'Press Start 2P'; font-size: 1rem;">
-                INBOX [2]
+            <div class="neo-box bg-[#0056b3] text-white p-6 text-center mb-4">
+                <h1 class="text-3xl font-bold tracking-tighter" style="font-family: 'Press Start 2P'">SPACECLONE</h1>
             </div>
             
-            <div class="flex justify-center gap-3 mb-6">
-                <div class="nav-button" onclick="switchView('homeView')">BACK</div>
-                <div class="nav-button" style="background: var(--neo-red); color: white;">COMPOSE</div>
-            </div>
-
-            <div class="neo-box">
-                <div class="mail-item mail-unread">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span>FROM: Tom (Admin)</span>
-                        <span>10:45 AM</span>
-                    </div>
-                    <div class="font-bold">Welcome to SpaceClone!</div>
+            <form id="loginForm" class="neo-box p-6">
+                <div class="mb-4">
+                    <label class="block font-bold text-xs mb-1">E-MAIL</label>
+                    <input type="email" class="neo-input" value="pilot@spaceclone.net">
                 </div>
-                <div class="mail-item mail-unread">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span>FROM: Neo</span>
-                        <span>Yesterday</span>
-                    </div>
-                    <div class="font-bold">Did you see the new KOF 2002 assets?</div>
+                <div class="mb-4">
+                    <label class="block font-bold text-xs mb-1">PASSKEY</label>
+                    <input type="password" class="neo-input" value="password">
                 </div>
-                <div class="mail-item">
-                    <div class="flex justify-between text-xs mb-1">
-                        <span>FROM: Sk8er_X</span>
-                        <span>02/20</span>
-                    </div>
-                    <div>Check out my new blog post!</div>
-                </div>
-            </div>
+                <button type="submit" class="neo-btn bg-yellow-400 w-full">ACCESS PORTAL</button>
+            </form>
         </div>
 
-        <!-- BLOG VIEW -->
-        <div id="blogView" class="view-section">
-            <div class="neo-box bg-green-header py-4 text-center" style="font-family: 'Press Start 2P'; font-size: 1rem;">
-                PILOT BLOGS
+        <!-- HOME VIEW -->
+        <div id="homeView" class="view-section">
+            <!-- Header Branding -->
+            <div class="neo-box bg-[#0056b3] text-white py-8 text-center mb-4">
+                <h1 class="text-3xl font-bold tracking-tighter" style="font-family: 'Press Start 2P'">SPACECLONE</h1>
             </div>
 
-            <div class="flex justify-center gap-3 mb-6">
-                <div class="nav-button" onclick="switchView('homeView')">BACK</div>
-                <div class="nav-button" style="background: var(--neo-green)">POST</div>
-            </div>
-
-            <div class="neo-box">
-                <div class="p-4 border-b-4 border-black">
-                    <div class="text-xs font-bold text-gray-500 mb-1">POSTED: MARCH 21, 2026</div>
-                    <h2 class="text-xl font-bold mb-2">The Golden Era of the Web is Back</h2>
-                    <p class="text-sm leading-relaxed">I spent the morning coding this interface. There's something special about chunky borders and primary colors. SpaceClone isn't just a site, it's a movement.</p>
+            <!-- Profile Area -->
+            <div class="neo-box p-6 text-center">
+                <div class="neo-box mx-auto w-48 aspect-square bg-[#ff00ff] flex items-center justify-center mb-4">
+                     <svg viewBox="0 0 100 100" class="w-3/4 h-3/4">
+                        <circle cx="50" cy="40" r="22" fill="white" stroke="black" stroke-width="6" />
+                        <path d="M15 95 Q50 60 85 95" fill="white" stroke="black" stroke-width="6" />
+                    </svg>
                 </div>
+                <div class="text-[10px] font-bold text-gray-400">● ONLINE NOW</div>
+            </div>
+
+            <!-- Spread the Word -->
+            <div class="neo-box">
+                <div class="neo-header bg-red-header">SPREAD THE WORD !</div>
+                <div class="p-4 text-center">
+                    <div class="text-[10px] font-bold text-red-500 mb-2 uppercase">Invite your crew!</div>
+                    <div class="flex border-2 border-black">
+                        <input type="text" readonly value="spaceclone.com/u/pixelvibe" class="flex-1 p-2 text-[10px] font-bold bg-white outline-none">
+                        <button class="bg-yellow-400 px-3 py-1 font-bold text-[10px] border-l-2 border-black">COPY</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Find Friends -->
+            <div class="neo-box">
+                <div class="neo-header bg-green-header">FIND FRIENDS</div>
                 <div class="p-4">
-                    <div class="text-xs font-bold text-gray-500 mb-1">POSTED: MARCH 18, 2026</div>
-                    <h2 class="text-xl font-bold mb-2">Why Neo Geo graphics still rule</h2>
-                    <p class="text-sm leading-relaxed">The high-contrast palettes from the 90s arcade era were designed to grab your attention. We are reclaiming that focus.</p>
+                    <div class="flex gap-2">
+                        <input type="text" placeholder="User ID..." class="neo-input flex-1">
+                        <button class="neo-btn bg-black text-white px-4">GO!</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Music Player -->
+            <div class="music-bar">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[8px]">▶</span>
+                        <span class="text-[10px] font-bold">NOW PLAYING</span>
+                    </div>
+                    <span class="text-[10px] opacity-70">02:45</span>
+                </div>
+                <div class="font-bold text-xs mt-1">Da Rude - Sandstorm</div>
+                <div class="progress-bg">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="neo-box">
+                <div class="neo-header bg-blue-header text-white">STATUS & VIBE</div>
+                <div class="p-6 text-sm leading-relaxed">
+                    <p><strong>Status:</strong> Tell everyone to join SpaceClone! We're bringing the old web back. <b>Zero ads, all vibes.</b></p>
+                    <div class="my-6 border-t-2 border-dashed border-black"></div>
+                    <p><strong>Interest:</strong> Anime, HTML 4.0, DDR, Energy drinks.</p>
+                </div>
+            </div>
+
+            <!-- Top 8 -->
+            <div class="neo-box">
+                <div class="neo-header bg-green-header">MY TOP 8 FRIENDS</div>
+                <div class="friends-grid">
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #1</span>
+                        <div class="friend-box bg-red-500">TOM</div>
+                        <span class="text-[10px] font-bold">SpaceClone</span>
+                    </div>
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #2</span>
+                        <div class="friend-box bg-blue-600">NEO</div>
+                        <span class="text-[10px] font-bold">The_One</span>
+                    </div>
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #3</span>
+                        <div class="friend-box bg-yellow-400 text-black">GURL</div>
+                        <span class="text-[10px] font-bold">Sk8er_X</span>
+                    </div>
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #4</span>
+                        <div class="friend-box bg-purple-600">GHOST</div>
+                        <span class="text-[10px] font-bold">InShell</span>
+                    </div>
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #5</span>
+                        <div class="friend-box bg-green-500">TRIN</div>
+                        <span class="text-[10px] font-bold">Matrix</span>
+                    </div>
+                    <div class="friend-card">
+                        <span class="rank-label">RANK #6</span>
+                        <div class="friend-box bg-orange-500">VAULT</div>
+                        <span class="text-[10px] font-bold">Dweller</span>
+                    </div>
                 </div>
             </div>
         </div>
-
     </div>
 
     <script>
-        function switchView(viewId) {
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.style.display = 'flex';
-            
-            // Random arcade-style loading messages
-            const msgs = ['SYNCING DATA...', 'ACCESSING PORTAL...', 'CONNECTING...', 'LOADING VIBES...'];
-            overlay.innerHTML = `${msgs[Math.floor(Math.random()*msgs.length)]}<br><br><span class="blink">PLEASE WAIT</span>`;
-            
-            setTimeout(() => {
-                document.querySelectorAll('.view-section').forEach(v => v.classList.remove('view-active'));
-                const target = document.getElementById(viewId);
-                if(target) {
-                    target.classList.add('view-active');
-                }
-                overlay.style.display = 'none';
-                window.scrollTo(0, 0);
-            }, 600);
-        }
-
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const overlay = document.getElementById('loadingOverlay');
             overlay.style.display = 'flex';
-            overlay.innerHTML = 'AUTHENTICATING...<br><br><span class="blink">PLEASE WAIT</span>';
-            
             setTimeout(() => {
-                overlay.innerHTML = 'ACCESS GRANTED!<br><br>BOOTING INTERFACE...';
-                setTimeout(() => {
-                    switchView('homeView');
-                }, 1000);
-            }, 1500);
-        });
-
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const overlay = document.getElementById('loadingOverlay');
-            overlay.style.display = 'flex';
-            overlay.innerHTML = 'INITIALIZING ID...';
-            
-            setTimeout(() => {
-                overlay.innerHTML = 'ID CREATED!<br><br>REDIRECTING...';
-                setTimeout(() => {
-                    switchView('loginView');
-                }, 1200);
+                document.getElementById('loginView').classList.remove('view-active');
+                document.getElementById('homeView').classList.add('view-active');
+                overlay.style.display = 'none';
+                window.scrollTo(0, 0);
             }, 1000);
         });
     </script>
 </body>
 </html>
-
-        
