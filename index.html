@@ -15,6 +15,17 @@
             --neo-red: #ef4444;
             --neo-green: #39ff14;
             --neo-magenta: #ff00ff;
+            --neo-orange: #ff6b00;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        @keyframes recording-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
         }
 
         body {
@@ -28,9 +39,10 @@
             min-height: 100vh;
             color: black;
             padding: 15px;
+            overflow-x: hidden;
         }
 
-        #appContainer { width: 100%; max-width: 440px; }
+        #appContainer { width: 100%; max-width: 440px; position: relative; }
 
         .neo-box {
             border: var(--border-thick) solid black;
@@ -52,9 +64,6 @@
             text-transform: uppercase;
         }
 
-        .nav-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-        .nav-btn-sub { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-
         .pixel-btn {
             border: 4px solid black;
             box-shadow: 4px 4px 0px black;
@@ -68,26 +77,123 @@
             user-select: none;
         }
         .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px black; }
+        .pixel-btn.disabled { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
 
-        .screen-black {
+        /* Camera & Video Styles */
+        .camera-container {
+            position: relative;
             background: black;
-            aspect-ratio: 16/10;
+            aspect-ratio: 4/3;
+            border: 4px solid #333;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #39ff14;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.6rem;
-            border: 4px solid #333;
+            transition: filter 0.1s ease-out;
         }
 
-        .music-bar {
-            background: #1a1a1a;
-            color: #39ff14;
-            padding: 12px;
+        #videoElement, .captured-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: contrast(1.1) brightness(1.1) sepia(0.2);
+        }
+
+        .rec-indicator {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #ef4444;
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            z-index: 20;
+            animation: recording-blink 1s infinite;
+        }
+
+        .scanline-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 2px 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* Discover Feed UI */
+        .feed-container {
+            height: 600px;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
             border: 4px solid black;
-            box-shadow: 4px 4px 0px black;
-            margin-bottom: 20px;
+            background: black;
+        }
+        .feed-container::-webkit-scrollbar { display: none; }
+        
+        .feed-item {
+            height: 100%;
+            width: 100%;
+            scroll-snap-align: start;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-bottom: 2px solid #222;
+        }
+
+        .feed-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 80px;
+            pointer-events: none;
+            color: white;
+            text-shadow: 2px 2px 0px black;
+        }
+
+        .social-sidebar {
+            position: absolute;
+            right: 15px;
+            bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+            z-index: 30;
+        }
+
+        .social-btn {
+            background: none;
+            border: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .social-btn span {
+            font-family: 'Press Start 2P';
+            font-size: 6px;
+            margin-top: 5px;
+        }
+
+        .marquee-container {
+            width: 150px;
+            overflow: hidden;
+            white-space: nowrap;
+            background: rgba(0,0,0,0.5);
+            padding: 2px 5px;
+            font-size: 8px;
+            border: 1px solid #39ff14;
+        }
+        .marquee-text {
+            display: inline-block;
+            animation: marquee 10s linear infinite;
         }
 
         #loadingOverlay {
@@ -97,212 +203,339 @@
             background: rgba(0,0,0,1); color: #39ff14;
             z-index: 5000; justify-content: center; align-items: center;
             font-family: 'Press Start 2P', cursive; text-align: center;
-            transition: opacity 0.5s ease-out;
         }
 
-        .view-section { display: none; }
-        .view-active { display: block; }
-
-        .big-branding-header {
-            background: var(--neo-blue);
-            color: white;
-            padding: 20px;
-            border: 4px solid black;
-            box-shadow: 6px 6px 0px black;
-            text-align: center;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 1.2rem;
-            margin-bottom: 24px;
-        }
-
-        .top8-card { text-align: center; font-family: 'Press Start 2P', cursive; }
-        .top8-box {
-            width: 100%;
-            aspect-ratio: 1/1;
-            border: 4px solid black;
-            box-shadow: 4px 4px 0px black;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: black;
-            font-size: 0.7rem;
-        }
-        .rank-label {
-            background: black;
-            color: white;
-            font-size: 0.4rem;
-            padding: 2px 4px;
-            display: inline-block;
-            margin-bottom: 4px;
-        }
+        #chatBox { height: 120px; overflow-y: auto; scrollbar-width: none; background: #000; border: 4px solid black; padding: 10px; color: #39ff14; font-family: 'Courier Prime'; }
     </style>
 </head>
 <body>
 
-    <!-- LOADING OVERLAY -->
     <div id="loadingOverlay">
         <div>
-            <div class="animate-pulse mb-4 text-sm" id="loadStatus">LOCATING SIGNAL...</div>
-            <div class="text-[8px] opacity-50" id="loadTerminal">KOF-NET TERMINAL v2.5.1</div>
-            <div id="retryMsg" class="mt-4 text-[10px] hidden text-white opacity-70">SIGNAL WEAK - ENGAGING BYPASS...</div>
+            <div class="animate-pulse mb-4 text-sm">BOOTING NEOGEO_OS...</div>
+            <div class="text-[8px] opacity-50 mb-6">SIGNAL STRENGTH: 98%</div>
+            <button onclick="hideOverlay()" class="pixel-btn bg-white text-black text-[8px] mx-auto px-4 py-2 block">SKIP BIOS</button>
         </div>
     </div>
 
     <div id="appContainer">
-        <!-- AUTH VIEW -->
-        <div id="authView" class="view-section view-active">
-            <div class="big-branding-header">INREALLIFE</div>
-            <div class="neo-box p-8 text-center">
-                <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase">A BETTER WORLD IS POSSIBLE.<br>ZERO ADS. ALL VIBES.</p>
-                <button id="loginBtn" class="pixel-btn bg-white w-full text-[0.7rem] py-4">LINK START</button>
+        <!-- NAVIGATION -->
+        <div id="mainNav" class="hidden">
+            <div class="grid grid-cols-2 gap-3 pt-4 mb-3">
+                <div id="nav-profile" class="pixel-btn bg-white" onclick="switchPage('profile')">MY PROFILE</div>
+                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">MY CHANNEL</div>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
+                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
+                <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
             </div>
         </div>
 
-        <!-- MAIN APP VIEW -->
-        <div id="mainView" class="view-section">
-            <div class="big-branding-header">INREALLIFE</div>
-
-            <div class="nav-btn-grid">
-                <div class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
-                <div class="pixel-btn bg-black text-white" onclick="switchPage('channel')">MY CHANNEL</div>
+        <!-- AUTH ENTRANCE -->
+        <div id="authView" class="block">
+            <div class="neo-box bg-[#0056b3] text-white p-10 text-center mb-6">
+                <h1 class="text-3xl font-bold font-['Press_Start_2P'] uppercase tracking-tighter">INREALLIFE</h1>
+                <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">A BETTER WORLD IS POSSIBLE</div>
             </div>
-            <div class="nav-btn-sub">
-                <div class="pixel-btn bg-[#0056b3] text-white" onclick="switchPage('profile')">MY PROFILE</div>
-                <div class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
-                <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
+            <div class="neo-box p-8 text-center">
+                <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase">THE GRID IS WAITING.<br>NO COOKIES. NO TRACKING.</p>
+                <button id="loginBtn" class="pixel-btn w-full text-[0.7rem] py-4 bg-white" onclick="showMainApp()">LINK START</button>
+            </div>
+        </div>
+
+        <!-- MAIN APP -->
+        <div id="mainView" class="hidden">
+            
+            <div id="page-discover" class="page-content">
+                <div class="feed-container" id="discoverFeed"></div>
             </div>
 
-            <!-- PAGE: CHANNEL -->
-            <div id="page-channel" class="page-content">
+            <div id="page-channel" class="page-content hidden">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]">LIVE DASHBOARD</div>
+                    <div class="neo-header bg-[#facc15]">UPLINK_TERMINAL</div>
                     <div class="p-4">
-                        <div class="screen-black mb-4">[ OFFLINE ]</div>
-                        <button class="pixel-btn bg-[#39ff14] w-full text-[0.7rem]">GO LIVE</button>
+                        <div class="camera-container mb-4">
+                            <div id="recIndicator" class="rec-indicator hidden">● REC</div>
+                            <video id="videoElement" autoplay playsinline class="hidden"></video>
+                            <canvas id="photoCanvas" class="hidden w-full h-full"></canvas>
+                            <div id="cameraPlaceholder" class="font-['Press_Start_2P'] text-[8px] text-[#39ff14] text-center p-4">
+                                [ SIGNAL_LOST ]<br><br>ACTIVATE LENS TO BROADCAST
+                            </div>
+                            <div class="scanline-overlay"></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button id="btnInitCam" onclick="initCamera()" class="pixel-btn bg-blue-500 text-white">SYNC LENS</button>
+                            <button id="btnCapture" onclick="takePhoto()" class="pixel-btn bg-yellow-400 disabled">SNAPSHOT</button>
+                            <button id="btnRecord" onclick="startRecording()" class="pixel-btn bg-red-500 text-white disabled">REC VIDEO</button>
+                            <button id="btnBroadcast" onclick="simulateBroadcast()" class="pixel-btn bg-red-600 text-white disabled">GO LIVE (GRID)</button>
+                        </div>
                     </div>
                 </div>
+
                 <div class="neo-box">
-                    <div class="neo-header bg-[#39ff14]">STREAM TOOLS</div>
-                    <div class="p-6">
-                        <p class="text-[10px] font-bold mb-4">When you are LIVE, you appear in the Discovery Feed for all users.</p>
-                        <div class="border-2 border-dashed border-gray-400 p-4 text-[8px] font-bold">
-                            AFK MODE: Switch to AFK to play community ads while you're away.
+                    <div class="neo-header bg-black text-[#39ff14]">LIVE_COMMS</div>
+                    <div class="p-4 bg-black">
+                        <div id="chatBox">
+                            <div class="italic opacity-40 text-center py-4 text-[8px] text-white">Awaiting signal broadcast...</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- PAGE: PROFILE -->
+            <div id="page-ads" class="page-content hidden">
+                <div class="neo-box">
+                    <div class="neo-header bg-[#ff00ff] text-white">ADS_STATUS</div>
+                    <div class="p-10 text-center">
+                        <div class="text-[14px] font-bold mb-4 font-['Press_Start_2P']">0.00000 CR</div>
+                        <div class="text-[8px] uppercase tracking-widest">Connect your wallet to cash out</div>
+                    </div>
+                </div>
+            </div>
+
             <div id="page-profile" class="page-content hidden">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]"><span>== ME ==</span><span>X</span></div>
-                    <div class="p-6 text-center">
-                        <div class="font-['Press_Start_2P'] text-[10px] mb-4">_PixelVibe_</div>
-                        <div class="neo-box mx-auto w-40 h-40 bg-[#ff00ff] flex items-center justify-center mb-2">
-                             <svg viewBox="0 0 100 100" class="w-full h-full p-4"><circle cx="50" cy="40" r="22" fill="none" stroke="black" stroke-width="8"/><path d="M10 95 Q50 55 90 95" fill="none" stroke="black" stroke-width="8"/></svg>
-                        </div>
-                        <div class="text-[8px] text-green-500 font-bold uppercase mt-2">• ONLINE NOW</div>
+                    <div class="neo-header bg-[#facc15]">GRID_ARCHIVE</div>
+                    <div id="savedCaptures" class="p-4 grid grid-cols-2 gap-2 bg-gray-200 min-h-[150px]">
+                        <div class="text-[8px] opacity-40 col-span-2 text-center py-10 uppercase">No signal history found</div>
                     </div>
                 </div>
-
-                <div class="neo-box">
-                    <div class="neo-header bg-[#0056b3] text-white">STATUS & VIBE</div>
-                    <div class="p-6 text-[10px] font-bold">
-                        <p><span class="underline">Status:</span> We're bringing the old web back. <b>Zero ads, all vibes.</b></p>
-                        <hr class="my-4 border-t-2 border-dashed border-black">
-                        <p><span class="underline">Interest:</span> Anime, HTML 4.0, DDR, Energy drinks.</p>
-                    </div>
-                </div>
-
-                <div class="neo-box">
-                    <div class="neo-header bg-[#39ff14]">MY TOP 8 FRIENDS</div>
-                    <div class="p-4 grid grid-cols-2 gap-6">
-                        <div class="top8-card">
-                            <span class="rank-label">RANK #1</span>
-                            <div class="top8-box bg-red-500">TOM</div>
-                            <div class="text-[8px] font-bold">SpaceClone</div>
-                        </div>
-                        <div class="top8-card">
-                            <span class="rank-label">RANK #2</span>
-                            <div class="top8-box bg-blue-600 text-white">NEO</div>
-                            <div class="text-[8px] font-bold">The_One</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- DISCOVER -->
-            <div id="page-discover" class="page-content hidden">
-                <div class="neo-box p-10 text-center text-xs italic">SCANNING FOR SIGNALS...</div>
             </div>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    <script>
+        // --- DATA & INITIALIZATION ---
+        const feedData = [
+            { user: "Kyo_Esaka", likes: 120, comments: 45, music: "TEARS 2002", color: "#ef4444", text: "The flames are back." },
+            { user: "Iori_Yagami", likes: 666, comments: 88, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood." },
+            { user: "Terry_Wild", likes: 450, comments: 12, music: "11th STREET", color: "#2563eb", text: "Are you okay!?" }
+        ];
 
-        const overlay = document.getElementById('loadingOverlay');
-        
-        // FORCE BYPASS IF LOADING STALLS (WATCHDOG)
-        const watchdog = setTimeout(() => {
-            console.log("Grid connection timed out. Entering offline mode.");
-            document.getElementById('retryMsg').classList.remove('hidden');
-            setTimeout(hideOverlay, 1500); 
-        }, 4000);
+        let savedAssets = JSON.parse(localStorage.getItem('grid_archive')) || [];
 
         function hideOverlay() {
-            clearTimeout(watchdog);
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.style.display = 'none', 500);
+            document.getElementById('loadingOverlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);
         }
 
-        const showMainApp = () => {
-            hideOverlay();
-            document.getElementById('authView').classList.remove('view-active');
-            document.getElementById('mainView').classList.add('view-active');
-            switchPage('channel');
-        };
-
-        // Initialize App
-        try {
-            const hasConfig = typeof __firebase_config !== 'undefined' && __firebase_config;
-            if (hasConfig) {
-                const config = JSON.parse(__firebase_config);
-                const app = initializeApp(config);
-                const auth = getAuth(app);
-                
-                onAuthStateChanged(auth, (user) => {
-                    if (user) showMainApp();
-                    else hideOverlay(); // Show login screen if not authed
-                });
-
-                document.getElementById('loginBtn').onclick = () => {
-                    overlay.style.display = 'flex';
-                    overlay.style.opacity = '1';
-                    signInAnonymously(auth).catch(e => {
-                        console.warn("Auth failed, bypass engaged", e);
-                        showMainApp();
-                    });
-                };
-            } else {
-                // LOCAL/GITHUB MODE
-                console.log("No config detected. Local mode active.");
-                hideOverlay();
-                document.getElementById('loginBtn').onclick = showMainApp;
-            }
-        } catch (e) {
-            console.error("Initialization Error:", e);
-            hideOverlay();
-            document.getElementById('loginBtn').onclick = showMainApp;
+        function showMainApp() {
+            document.getElementById('authView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
+            document.getElementById('mainNav').classList.remove('hidden');
+            switchPage('discover');
         }
 
-        window.switchPage = (id) => {
+        function switchPage(id) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-            const target = document.getElementById('page-' + id);
-            if(target) target.classList.remove('hidden');
-        };
+            document.querySelectorAll('.pixel-btn').forEach(b => {
+                if (!b.id.startsWith('nav-')) return;
+                b.classList.remove('bg-[#39ff14]', 'text-black', 'bg-[#ff00ff]', 'text-white');
+                b.classList.add('bg-white', 'text-black');
+            });
+            document.getElementById('page-' + id).classList.remove('hidden');
+            const navBtn = document.getElementById('nav-' + id);
+            if(navBtn) {
+                navBtn.classList.remove('bg-white');
+                if (id === 'ads') navBtn.classList.add('bg-[#ff00ff]', 'text-white');
+                else navBtn.classList.add('bg-[#39ff14]', 'text-black');
+            }
+            if (id === 'discover') renderFeed();
+        }
+
+        function renderFeed() {
+            const feed = document.getElementById('discoverFeed');
+            feed.innerHTML = feedData.map(item => `
+                <div class="feed-item">
+                    <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
+                        <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
+                    </div>
+                    <div class="social-sidebar">
+                        <button class="social-btn" onclick="this.style.color='#ef4444'">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+                            <span>${item.likes}</span>
+                        </button>
+                        <button class="social-btn">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
+                            <span>${item.comments}</span>
+                        </button>
+                        <button class="social-btn" onclick="copyGridLink()">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.637-2.31l-4.94-2.47a3 3 0 00-.02-.319z"/></svg>
+                            <span>SHARE</span>
+                        </button>
+                    </div>
+                    <div class="feed-ui">
+                        <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
+                        <div class="text-[8px] mb-4">${item.text}</div>
+                        <div class="marquee-container">
+                            <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function copyGridLink() {
+            const dummy = document.createElement("input");
+            document.body.appendChild(dummy);
+            dummy.value = window.location.href;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+        }
+
+        // --- CAMERA, PERSISTENCE & GALLERY SYSTEM ---
+        let video = document.getElementById('videoElement');
+        let canvas = document.getElementById('photoCanvas');
+        let stream = null;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+
+        function persistToArchive(dataUrl, type) {
+            if (type === 'image') {
+                savedAssets.unshift({ type, data: dataUrl, timestamp: Date.now() });
+                localStorage.setItem('grid_archive', JSON.stringify(savedAssets.slice(0, 10)));
+            }
+        }
+
+        async function initCamera() {
+            const btn = document.getElementById('btnInitCam');
+            const placeholder = document.getElementById('cameraPlaceholder');
+            btn.innerText = "LINKING...";
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    video.classList.remove('hidden');
+                    placeholder.classList.add('hidden');
+                    document.getElementById('btnCapture').classList.remove('disabled');
+                    document.getElementById('btnRecord').classList.remove('disabled');
+                    btn.innerText = "LENS ACTIVE";
+                    btn.classList.add('bg-green-500');
+                };
+            } catch (err) {
+                btn.innerText = "LINK FAILED";
+            }
+        }
+
+        async function takePhoto() {
+            if (!stream) return;
+
+            // Visual Feedback: Flash effect
+            const container = document.querySelector('.camera-container');
+            container.style.filter = 'brightness(3)';
+            setTimeout(() => container.style.filter = '', 100);
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imgData = canvas.toDataURL('image/png');
+            renderToGallery(imgData, 'image');
+            persistToArchive(imgData, 'image');
+
+            canvas.classList.remove('hidden');
+            video.classList.add('hidden');
+            document.getElementById('btnBroadcast').classList.remove('disabled');
+        }
+
+        function renderToGallery(src, type) {
+            const gallery = document.getElementById('savedCaptures');
+            if (gallery.innerText.includes('No signal history')) gallery.innerHTML = '';
+            
+            const element = document.createElement('div');
+            element.className = "relative border-2 border-black shadow-[2px_2px_0px_black] overflow-hidden group";
+            
+            if (type === 'image') {
+                element.innerHTML = `<img src="${src}" class="w-full h-auto">`;
+            } else {
+                element.innerHTML = `
+                    <video src="${src}" class="captured-video" autoplay loop muted></video>
+                    <div class="scanline-overlay"></div>
+                    <div class="absolute top-1 right-1 bg-black text-[#39ff14] text-[5px] px-1 font-['Press_Start_2P']">MOV</div>
+                `;
+            }
+            
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = "X";
+            delBtn.className = "absolute top-0 left-0 bg-red-600 text-white text-[8px] p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50";
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                element.remove();
+                // Basic cleanup of local storage if it's the exact match (simplified)
+                if (type === 'image') {
+                    savedAssets = savedAssets.filter(a => a.data !== src);
+                    localStorage.setItem('grid_archive', JSON.stringify(savedAssets));
+                }
+            };
+            element.appendChild(delBtn);
+            gallery.prepend(element);
+        }
+
+        function startRecording() {
+            if (!stream) return;
+            recordedChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+            
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) recordedChunks.push(event.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                renderToGallery(url, 'video');
+                document.getElementById('recIndicator').classList.add('hidden');
+                document.getElementById('btnRecord').innerText = "REC VIDEO";
+                document.getElementById('btnBroadcast').classList.remove('disabled');
+            };
+
+            mediaRecorder.start();
+            document.getElementById('recIndicator').classList.remove('hidden');
+            document.getElementById('btnRecord').innerText = "STOPPING...";
+            
+            setTimeout(() => {
+                if (mediaRecorder.state === "recording") mediaRecorder.stop();
+            }, 4000);
+        }
+
+        function simulateBroadcast() {
+            const chat = document.getElementById('chatBox');
+            chat.innerHTML = "";
+            const messages = [
+                { u: "KYO_01", m: "VIDEO SIGNAL RECEIVED!" },
+                { u: "MAI_FAN", m: "The 16-bit quality is amazing." },
+                { u: "GRID_WATCH", m: "TRANSMISSION SUCCESSFUL." }
+            ];
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i >= messages.length) { clearInterval(interval); return; }
+                const div = document.createElement('div');
+                div.className = "text-[8px] mb-2 font-bold uppercase border-l-2 border-[#39ff14] pl-2";
+                div.innerHTML = `<span class="text-white opacity-60">${messages[i].u}:</span> ${messages[i].m}`;
+                chat.appendChild(div);
+                chat.scrollTop = chat.scrollHeight;
+                i++;
+            }, 1000);
+            document.getElementById('btnBroadcast').innerText = "LIVE ON GRID";
+        }
+
+        // --- WINDOW LISTENERS ---
+        window.addEventListener('DOMContentLoaded', () => {
+            savedAssets.forEach(asset => renderToGallery(asset.data, asset.type));
+        });
+
+        window.addEventListener('resize', () => {
+            if(stream) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+            }
+        });
+
+        window.onload = () => setTimeout(hideOverlay, 1000);
     </script>
 </body>
 </html>
