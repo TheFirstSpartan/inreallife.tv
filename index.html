@@ -13,17 +13,9 @@
             --neo-blue: #0056b3;
             --neo-yellow: #facc15;
             --neo-red: #ef4444;
-            --neo-green: #22c55e;
+            --neo-green: #39ff14;
             --neo-magenta: #ff00ff;
         }
-
-        @keyframes rainbow-flash {
-            0% { border-color: var(--neo-red); box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px var(--neo-magenta); }
-            50% { border-color: var(--neo-blue); box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px var(--neo-yellow); }
-            100% { border-color: var(--neo-red); box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px var(--neo-magenta); }
-        }
-
-        .rainbow-box { animation: rainbow-flash 0.5s linear infinite; }
 
         body {
             background-color: #e5e7eb;
@@ -60,20 +52,8 @@
             text-transform: uppercase;
         }
 
-        /* Nav Buttons from Screenshot */
-        .nav-btn-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .nav-btn-sub {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
+        .nav-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .nav-btn-sub { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
 
         .pixel-btn {
             border: 4px solid black;
@@ -85,17 +65,9 @@
             cursor: pointer;
             text-transform: uppercase;
             transition: all 0.1s;
+            user-select: none;
         }
-
         .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px black; }
-        .btn-active { transform: translate(2px, 2px); box-shadow: none !important; }
-
-        /* Monitor / Screen Styles */
-        .monitor-frame {
-            background: #f3f4f6;
-            border: 4px solid black;
-            padding: 15px;
-        }
 
         .screen-black {
             background: black;
@@ -118,23 +90,21 @@
             margin-bottom: 20px;
         }
 
-        .progress-track { background: #333; height: 10px; margin-top: 8px; border: 2px solid black; }
-        .progress-fill { background: #39ff14; height: 100%; width: 65%; }
-
         #loadingOverlay {
             display: flex;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.98); color: #39ff14;
+            background: rgba(0,0,0,1); color: #39ff14;
             z-index: 5000; justify-content: center; align-items: center;
             font-family: 'Press Start 2P', cursive; text-align: center;
+            transition: opacity 0.5s ease-out;
         }
 
         .view-section { display: none; }
         .view-active { display: block; }
 
         .big-branding-header {
-            background: black;
+            background: var(--neo-blue);
             color: white;
             padding: 20px;
             border: 4px solid black;
@@ -143,91 +113,81 @@
             font-family: 'Press Start 2P', cursive;
             font-size: 1.2rem;
             margin-bottom: 24px;
-            letter-spacing: -2px;
         }
 
-        .friend-box {
+        .top8-card { text-align: center; font-family: 'Press Start 2P', cursive; }
+        .top8-box {
             width: 100%;
             aspect-ratio: 1/1;
-            border: 3px solid black;
-            box-shadow: 3px 3px 0px black;
+            border: 4px solid black;
+            box-shadow: 4px 4px 0px black;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.5rem;
-            color: white;
-            text-shadow: 1px 1px 0px black;
+            color: black;
+            font-size: 0.7rem;
         }
-
-        .rank-tag {
+        .rank-label {
             background: black;
             color: white;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.3rem;
-            padding: 1px 3px;
+            font-size: 0.4rem;
+            padding: 2px 4px;
             display: inline-block;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
     </style>
 </head>
 <body>
 
-    <div id="appContainer">
-        <!-- LOADING OVERLAY -->
-        <div id="loadingOverlay">
-            <div>
-                <div class="animate-pulse mb-4 text-sm" id="overlayText">LOCATING SIGNAL...</div>
-                <div class="text-[8px] opacity-50">KOF-NET TERMINAL v2.5.1</div>
-            </div>
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay">
+        <div>
+            <div class="animate-pulse mb-4 text-sm" id="loadStatus">LOCATING SIGNAL...</div>
+            <div class="text-[8px] opacity-50" id="loadTerminal">KOF-NET TERMINAL v2.5.1</div>
+            <div id="retryMsg" class="mt-4 text-[10px] hidden text-white opacity-70">SIGNAL WEAK - ENGAGING BYPASS...</div>
         </div>
+    </div>
 
+    <div id="appContainer">
         <!-- AUTH VIEW -->
         <div id="authView" class="view-section view-active">
-            <div class="big-branding-header rainbow-box">INREALLIFE</div>
+            <div class="big-branding-header">INREALLIFE</div>
             <div class="neo-box p-8 text-center">
                 <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase">A BETTER WORLD IS POSSIBLE.<br>ZERO ADS. ALL VIBES.</p>
-                <button id="loginBtn" class="pixel-btn bg-white w-full text-[0.7rem] py-4 rainbow-box">LINK START</button>
+                <button id="loginBtn" class="pixel-btn bg-white w-full text-[0.7rem] py-4">LINK START</button>
             </div>
         </div>
 
         <!-- MAIN APP VIEW -->
         <div id="mainView" class="view-section">
-            <div class="big-branding-header rainbow-box">INREALLIFE</div>
+            <div class="big-branding-header">INREALLIFE</div>
 
-            <!-- NAVIGATION BAR -->
             <div class="nav-btn-grid">
-                <div class="pixel-btn bg-[#39ff14]" id="nav-discover" onclick="switchPage('discover')">DISCOVER</div>
-                <div class="pixel-btn bg-black text-white" id="nav-channel" onclick="switchPage('channel')">MY CHANNEL</div>
+                <div class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
+                <div class="pixel-btn bg-black text-white" onclick="switchPage('channel')">MY CHANNEL</div>
             </div>
             <div class="nav-btn-sub">
-                <div class="pixel-btn bg-[#0056b3] text-white" onclick="switchPage('profile')">GRID PROFILE</div>
-                <div class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">UPLINK ADS</div>
-                <div class="pixel-btn bg-white" onclick="handleLogout()">EXIT</div>
+                <div class="pixel-btn bg-[#0056b3] text-white" onclick="switchPage('profile')">MY PROFILE</div>
+                <div class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
+                <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
             </div>
 
-            <!-- PAGE: MY CHANNEL -->
+            <!-- PAGE: CHANNEL -->
             <div id="page-channel" class="page-content">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]">CHANNEL DASHBOARD</div>
+                    <div class="neo-header bg-[#facc15]">LIVE DASHBOARD</div>
                     <div class="p-4">
-                        <div class="monitor-frame">
-                            <div class="screen-black">
-                                [ SIGNAL OFFLINE ]
-                            </div>
-                        </div>
-                        <button class="pixel-btn bg-[#39ff14] w-full mt-4 text-[0.7rem]">INITIATE BROADCAST</button>
+                        <div class="screen-black mb-4">[ OFFLINE ]</div>
+                        <button class="pixel-btn bg-[#39ff14] w-full text-[0.7rem]">GO LIVE</button>
                     </div>
                 </div>
-
                 <div class="neo-box">
                     <div class="neo-header bg-[#39ff14]">STREAM TOOLS</div>
                     <div class="p-6">
-                        <p class="text-[10px] font-bold leading-relaxed mb-6">
-                            When broadcast is active, your presence is mirrored to all Grid pilots.
-                        </p>
-                        <div class="border-2 border-dashed border-gray-400 p-4 bg-gray-50 text-[8px] font-bold">
-                            <span class="bg-black text-white px-1 mr-1 uppercase">AFK MODE:</span> Switch to AFK to loop community transmissions. You retain 50% of generated energy units.
+                        <p class="text-[10px] font-bold mb-4">When you are LIVE, you appear in the Discovery Feed for all users.</p>
+                        <div class="border-2 border-dashed border-gray-400 p-4 text-[8px] font-bold">
+                            AFK MODE: Switch to AFK to play community ads while you're away.
                         </div>
                     </div>
                 </div>
@@ -236,114 +196,113 @@
             <!-- PAGE: PROFILE -->
             <div id="page-profile" class="page-content hidden">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]"><span>== PILOT ==</span><span>X</span></div>
+                    <div class="neo-header bg-[#facc15]"><span>== ME ==</span><span>X</span></div>
                     <div class="p-6 text-center">
-                        <div id="userNameDisp" class="font-['Press_Start_2P'] text-[10px] mb-4">PILOT_USER</div>
-                        <div id="avatarBox" class="neo-box mx-auto w-36 h-36 bg-[#ff00ff] flex items-center justify-center mb-2">
+                        <div class="font-['Press_Start_2P'] text-[10px] mb-4">_PixelVibe_</div>
+                        <div class="neo-box mx-auto w-40 h-40 bg-[#ff00ff] flex items-center justify-center mb-2">
                              <svg viewBox="0 0 100 100" class="w-full h-full p-4"><circle cx="50" cy="40" r="22" fill="none" stroke="black" stroke-width="8"/><path d="M10 95 Q50 55 90 95" fill="none" stroke="black" stroke-width="8"/></svg>
                         </div>
-                        <div class="text-[8px] text-green-600 font-bold uppercase mt-2">
-                             Uplink Active
+                        <div class="text-[8px] text-green-500 font-bold uppercase mt-2">• ONLINE NOW</div>
+                    </div>
+                </div>
+
+                <div class="neo-box">
+                    <div class="neo-header bg-[#0056b3] text-white">STATUS & VIBE</div>
+                    <div class="p-6 text-[10px] font-bold">
+                        <p><span class="underline">Status:</span> We're bringing the old web back. <b>Zero ads, all vibes.</b></p>
+                        <hr class="my-4 border-t-2 border-dashed border-black">
+                        <p><span class="underline">Interest:</span> Anime, HTML 4.0, DDR, Energy drinks.</p>
+                    </div>
+                </div>
+
+                <div class="neo-box">
+                    <div class="neo-header bg-[#39ff14]">MY TOP 8 FRIENDS</div>
+                    <div class="p-4 grid grid-cols-2 gap-6">
+                        <div class="top8-card">
+                            <span class="rank-label">RANK #1</span>
+                            <div class="top8-box bg-red-500">TOM</div>
+                            <div class="text-[8px] font-bold">SpaceClone</div>
+                        </div>
+                        <div class="top8-card">
+                            <span class="rank-label">RANK #2</span>
+                            <div class="top8-box bg-blue-600 text-white">NEO</div>
+                            <div class="text-[8px] font-bold">The_One</div>
                         </div>
                     </div>
-                </div>
-
-                <!-- TOP 8 CREW -->
-                <div class="neo-box">
-                    <div class="neo-header bg-[#39ff14]">TOP 8 CREW</div>
-                    <div class="p-4 grid grid-cols-4 gap-2">
-                        <div class="text-center"><div class="rank-tag">#1</div><div class="friend-box bg-red-600">KYA</div></div>
-                        <div class="text-center"><div class="rank-tag">#2</div><div class="friend-box bg-blue-700">NEO</div></div>
-                        <div class="text-center"><div class="rank-tag">#3</div><div class="friend-box bg-yellow-500">IORI</div></div>
-                        <div class="text-center"><div class="rank-tag">#4</div><div class="friend-box bg-purple-600">ASH</div></div>
-                        <div class="text-center"><div class="rank-tag">#5</div><div class="friend-box bg-green-600">TERI</div></div>
-                        <div class="text-center"><div class="rank-tag">#6</div><div class="friend-box bg-orange-500">MAI</div></div>
-                        <div class="text-center"><div class="rank-tag">#7</div><div class="friend-box bg-pink-500">KULA</div></div>
-                        <div class="text-center"><div class="rank-tag">#8</div><div class="friend-box bg-cyan-600">MAX</div></div>
-                    </div>
-                </div>
-
-                <!-- SHARE BOX -->
-                <div class="neo-box">
-                    <div class="neo-header bg-[#ef4444] text-white">SHARE_PROFILE</div>
-                    <div class="p-4 text-center">
-                        <button onclick="copyLink()" class="pixel-btn bg-white border-red-600 text-red-600 w-full py-2">COPY GRID_URL</button>
-                    </div>
-                </div>
-
-                <!-- MUSIC PLAYER -->
-                <div class="music-bar">
-                    <div class="flex justify-between items-center text-[7px] font-['Press_Start_2P']">
-                        <span>▶ KOF_MVS_RADIO</span>
-                        <span>LOOP</span>
-                    </div>
-                    <div class="mt-2 font-bold text-[10px] text-[#39ff14]">TEARS (KYO THEME) - 2002</div>
-                    <div class="progress-track"><div class="progress-fill"></div></div>
                 </div>
             </div>
 
             <!-- DISCOVER -->
             <div id="page-discover" class="page-content hidden">
-                <div class="neo-box">
-                    <div class="neo-header bg-[#39ff14]">DISCOVER FEED</div>
-                    <div class="p-10 text-center text-xs italic">SCANNING FOR LIVE PILOTS...</div>
-                </div>
+                <div class="neo-box p-10 text-center text-xs italic">SCANNING FOR SIGNALS...</div>
             </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'inreallife-v1';
+        const overlay = document.getElementById('loadingOverlay');
+        
+        // FORCE BYPASS IF LOADING STALLS (WATCHDOG)
+        const watchdog = setTimeout(() => {
+            console.log("Grid connection timed out. Entering offline mode.");
+            document.getElementById('retryMsg').classList.remove('hidden');
+            setTimeout(hideOverlay, 1500); 
+        }, 4000);
 
-        window.switchPage = (pageId) => {
+        function hideOverlay() {
+            clearTimeout(watchdog);
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+        }
+
+        const showMainApp = () => {
+            hideOverlay();
+            document.getElementById('authView').classList.remove('view-active');
+            document.getElementById('mainView').classList.add('view-active');
+            switchPage('channel');
+        };
+
+        // Initialize App
+        try {
+            const hasConfig = typeof __firebase_config !== 'undefined' && __firebase_config;
+            if (hasConfig) {
+                const config = JSON.parse(__firebase_config);
+                const app = initializeApp(config);
+                const auth = getAuth(app);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) showMainApp();
+                    else hideOverlay(); // Show login screen if not authed
+                });
+
+                document.getElementById('loginBtn').onclick = () => {
+                    overlay.style.display = 'flex';
+                    overlay.style.opacity = '1';
+                    signInAnonymously(auth).catch(e => {
+                        console.warn("Auth failed, bypass engaged", e);
+                        showMainApp();
+                    });
+                };
+            } else {
+                // LOCAL/GITHUB MODE
+                console.log("No config detected. Local mode active.");
+                hideOverlay();
+                document.getElementById('loginBtn').onclick = showMainApp;
+            }
+        } catch (e) {
+            console.error("Initialization Error:", e);
+            hideOverlay();
+            document.getElementById('loginBtn').onclick = showMainApp;
+        }
+
+        window.switchPage = (id) => {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-            const target = document.getElementById('page-' + pageId);
+            const target = document.getElementById('page-' + id);
             if(target) target.classList.remove('hidden');
         };
-
-        window.handleLogout = () => signOut(auth);
-
-        window.copyLink = () => {
-            const url = window.location.href + "?pilot=" + auth.currentUser.uid;
-            const dummy = document.createElement("input");
-            document.body.appendChild(dummy);
-            dummy.value = url;
-            dummy.select();
-            document.execCommand("copy");
-            document.body.removeChild(dummy);
-            alert("LINK COPIED TO GRID CLIPBOARD");
-        };
-
-        document.getElementById('loginBtn').onclick = async () => {
-            document.getElementById('loadingOverlay').style.display = 'flex';
-            await signInAnonymously(auth);
-        };
-
-        onAuthStateChanged(auth, async (user) => {
-            document.getElementById('loadingOverlay').style.display = 'none';
-            if (user) {
-                const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-                const snap = await getDoc(userRef);
-                const handle = snap.exists() ? snap.data().handle : "PILOT_" + user.uid.substring(0,5).toUpperCase();
-                document.getElementById('userNameDisp').innerText = handle;
-                
-                document.getElementById('authView').classList.remove('view-active');
-                document.getElementById('mainView').classList.add('view-active');
-                switchPage('channel');
-            } else {
-                document.getElementById('authView').classList.add('view-active');
-                document.getElementById('mainView').classList.remove('view-active');
-            }
-        });
-
     </script>
 </body>
 </html>
