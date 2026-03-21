@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>irl.tv // Discovery</title>
+<style>
+:root {
+--red: #FF3131;
+--blue: #0047AB;
+--green: #39FF14;
+--yellow: #FAFF00;
+--purple: #BC13FE;
+--black: #000000;
+--white: #FFFFFF;
+--border-width: 4px;
+}
+
+* { box-sizing: border-box; cursor: default; }
+body {
+background-color: #e0e0e0;
+background-image: radial-gradient(var(--black) 1px, transparent 0);
+background-size: 20px 20px;
+font-family: "Courier New", Courier, monospace;
+margin: 0; padding: 15px; color: var(--black);
+}
+
+.bold-border { border: var(--border-width) solid var(--black); }
+.shadow { box-shadow: 6px 6px 0px var(--black); }
+.bg-red { background-color: var(--red); color: white; }
+.bg-blue { background-color: var(--blue); color: white; }
+.bg-green { background-color: var(--green); }
+.bg-yellow { background-color: var(--yellow); }
+.bg-purple { background-color: var(--purple); color: white; }
+
+header { text-align: center; margin-bottom: 20px; }
+.logo-container {
+display: inline-block; width: 100%; max-width: 800px; height: 50px;
+overflow: hidden; border: var(--border-width) solid var(--black);
+background-color: var(--red); box-shadow: 6px 6px 0px var(--black);
+transform: skew(-5deg); position: relative;
+}
+
+.ticker-col { display: flex; flex-direction: column; animation: ticker-vertical 12s linear infinite; }
+.ticker-item { height: 50px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 900; color: white; text-transform: uppercase; }
+@keyframes ticker-vertical { 0% { transform: translateY(0); } 100% { transform: translateY(-250px); } }
+
+nav { margin-top: 15px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+nav button {
+background: var(--white); border: var(--border-width) solid var(--black);
+cursor: pointer; font-weight: bold; padding: 8px 15px; font-size: 0.8rem;
+box-shadow: 4px 4px 0px var(--black); text-transform: uppercase;
+}
+nav button.active { background: var(--black); color: var(--white); }
+
+.container { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 25px; }
+@media (min-width: 900px) { .container { grid-template-columns: 350px 1fr; } }
+
+.box { background-color: var(--white); margin-bottom: 15px; overflow: hidden; }
+.box-header { padding: 8px 12px; font-size: 0.85rem; font-weight: 900; text-transform: uppercase; border-bottom: var(--border-width) solid var(--black); }
+.box-content { padding: 12px; font-size: 0.85rem; }
+
+.feed-container { display: flex; flex-direction: column; gap: 30px; }
+.video-card { position: relative; width: 100%; background: #000; border: var(--border-width) solid var(--black); box-shadow: 8px 8px 0px var(--black); }
+.video-aspect { position: relative; padding-bottom: 125%; height: 0; background: #050505; overflow: hidden; }
+
+.sim-placeholder {
+position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+display: flex; flex-direction: column; align-items: center; justify-content: center;
+background: repeating-radial-gradient(circle at center, #111, #000 20%);
+}
+.sim-visual {
+width: 120px; height: 120px; border: 4px solid var(--green);
+position: relative; animation: pulse 2s infinite ease-in-out;
+}
+.sim-visual::after {
+content: ""; position: absolute; top: 50%; left: -20%; width: 140%; height: 2px;
+background: var(--green); box-shadow: 0 0 15px var(--green); animation: scan 3s infinite linear;
+}
+
+@keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes scan { 0% { top: 0%; } 100% { top: 100%; } }
+
+.video-overlay {
+position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px;
+background: linear-gradient(transparent, rgba(0,0,0,0.95)); color: white;
+pointer-events: none;
+}
+.creator-tag { font-weight: 900; font-size: 1.2rem; color: var(--green); display: flex; align-items: center; gap: 5px; }
+.badge { font-size: 0.6rem; padding: 2px 5px; background: var(--blue); border-radius: 3px; vertical-align: middle; color: white; }
+
+.action-bar {
+position: absolute; right: 10px; bottom: 80px; display: flex; flex-direction: column; gap: 15px; align-items: center;
+}
+.action-btn {
+width: 50px; height: 50px; border-radius: 50%; border: 3px solid white;
+background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column;
+align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;
+cursor: pointer; pointer-events: auto;
+}
+.action-btn.liked { background: var(--red); border-color: var(--red); }
+
+.algorithm-label {
+position: absolute; top: 15px; left: 15px; padding: 5px 10px; font-size: 0.65rem;
+font-weight: 900; text-transform: uppercase; background: var(--yellow); border: 2px solid black; color: black; z-index: 10;
+}
+.live-indicator {
+position: absolute; top: 15px; right: 15px; display: flex; align-items: center; gap: 5px;
+background: var(--red); color: white; padding: 3px 8px; font-weight: 900; font-size: 0.6rem; z-index: 10;
+}
+.live-dot { width: 6px; height: 6px; background: white; border-radius: 50%; animation: blink 1s infinite; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.legal-text { font-size: 0.75rem; line-height: 1.6; }
+footer { margin-top: 50px; padding: 20px; border-top: 2px dashed #999; font-size: 10px; color: #666; text-align: center; }
+
+.profile-avatar { width: 100px; height: 100px; border: var(--border-width) solid var(--black); background: var(--white); margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stat-box { border: 2px solid var(--black); padding: 8px; text-align: center; }
+.stat-box label { font-size: 0.6rem; font-weight: 900; display: block; text-transform: uppercase; margin-bottom: 3px; }
+.stat-box span { font-weight: 900; color: var(--blue); }
+</style>
+</head>
+<body>
+
+<header>
+<div class="logo-container">
+<div class="ticker-col">
+<div class="ticker-item">LIVE DISCOVERY // NO ALGORITHMIC BIAS</div>
+<div class="ticker-item">CLOUT REWARDS THE COMMUNITY</div>
+<div class="ticker-item">EVERYONE HAS A SHOT AT VIRALITY</div>
+<div class="ticker-item">AD REVENUE SPLIT 50/50 ALWAYS</div>
+</div>
+</div>
+<nav id="mainNav">
+<button onclick="showPage('watchView')" id="nav-watchView" class="bg-green">DISCOVER</button>
+<button onclick="showPage('profileView')" id="nav-profileView">MY CHANNEL</button>
+<button onclick="showPage('myProfileView')" id="nav-myProfileView" class="bg-blue" style="color:white;">MY PROFILE</button>
+<button onclick="showPage('adManagerView')" id="nav-adManagerView" class="bg-purple">AD NETWORK</button>
+<button onclick="showPage('helpView')" id="nav-helpView">HELP</button>
+</nav>
+</header>
+
+<div id="watchView" class="container page-section">
+<aside>
+<div class="box bold-border shadow">
+<div class="box-header bg-yellow">📈 VIRAL VELOCITY</div>
+<div class="box-content" id="algoStats">
+<div style="font-size: 0.7rem;">
+<b>Current Mode:</b> <span style="color:var(--red)">UNDERDOG BOOST</span><br>
+<b>Active Streams:</b> 1,204<br>
+<b>Network Clout:</b> 840K<br>
+<hr style="border:1px dashed #ccc">
+<p style="font-size: 10px;">The feed mixes <b>Authorities</b> (established) with <b>Underdogs</b> (fresh talent) to keep the network healthy.</p>
+</div>
+</div>
+</div>
+<div class="box bold-border shadow">
+<div class="box-header bg-black" style="color:white">LIVE NOW</div>
+<div id="sidebarList" style="max-height: 400px; overflow-y: auto;"></div>
+</div>
+</aside>
+<main class="feed-container" id="discoveryFeed"></main>
+</div>
+
+<div id="myProfileView" class="container page-section" style="display:none;">
+<aside>
+<div class="box bold-border shadow">
+<div class="box-header bg-blue" style="color:white;">USER_DOSSIER</div>
+<div class="box-content">
+<div class="profile-avatar shadow">👤</div>
+<div style="text-align: center; font-weight: 900;">@USER_NODE_88</div>
+<div style="text-align: center; font-size: 0.6rem; margin-top: 5px; color: #666;">ID: 9x-442-RLTV</div>
+</div>
+</div>
+<div class="box bold-border shadow">
+<div class="box-header bg-black" style="color:white;">CLOUT_METRICS</div>
+<div class="box-content stat-grid">
+<div class="stat-box"><label>Total</label><span>152</span></div>
+<div class="stat-box"><label>Rank</label><span>#402</span></div>
+<div class="stat-box"><label>Tier</label><span>BOOST</span></div>
+<div class="stat-box"><label>V-Score</label><span>0.8x</span></div>
+</div>
+</div>
+</aside>
+<main>
+<div class="box bold-border shadow">
+<div class="box-header bg-yellow">BIO_MANIFESTO</div>
+<div class="box-content">
+<p style="font-size: 0.8rem; margin-bottom: 15px;">Your Bio appears on your stream cards. Keep it sharp.</p>
+<textarea style="width:100%; height:120px; border:2px solid black; padding:10px; font-family:monospace; font-size:0.8rem; resize:none;" placeholder="What are you broadcasting?">Broadcasting from the edge of the grid. Seeking bandwidth, not fame.</textarea>
+<button class="bg-green bold-border shadow" style="margin-top:15px; padding:10px 20px; font-weight:900; cursor:pointer;">UPDATE_SIGNAL</button>
+</div>
+</div>
+</main>
+</div>
+
+<div id="profileView" class="container page-section" style="display:none;">
+<aside>
+<div class="box bold-border shadow">
+<div class="box-header bg-yellow">LIVE DASHBOARD</div>
+<div class="box-content">
+<div id="myMonitor" style="background:#000; height:180px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:4px solid #333; position:relative;">
+<div id="mySignal" style="color:var(--green); font-weight:bold; font-size:0.7rem;">[ OFFLINE ]</div>
+<div id="myVisual" style="display:none;" class="sim-visual"></div>
+</div>
+<button id="liveToggle" onclick="toggleLive()" class="bg-green bold-border" style="width:100%; margin-top:10px; padding:12px; font-weight:900; letter-spacing:1px;">GO LIVE</button>
+<button id="afkToggle" onclick="toggleAFK()" class="bg-purple bold-border shadow" style="width:100%; margin-top:10px; padding:12px; font-weight:900; display:none; color:white;">AFK (AD BREAK)</button>
+</div>
+</div>
+</aside>
+<main>
+<div class="box bold-border shadow">
+<div class="box-header bg-green">STREAM TOOLS</div>
+<div class="box-content">
+<p>When you are LIVE, you appear in the Discovery Feed for all users.</p>
+</div>
+</div>
+</main>
+</div>
+
+<div id="helpView" class="container page-section" style="display:none;">
+<main style="grid-column: 1 / -1;">
+<div class="box bold-border shadow">
+<div class="box-header bg-blue">SUPPORT CENTER</div>
+<div class="box-content legal-text">
+<h3>How it Works</h3>
+<p>Every 5th card in a user's feed is a randomly selected stream with under 100 Clout.</p>
+</div>
+</div>
+</main>
+</div>
+
+<div id="adManagerView" class="container page-section" style="display:none;">
+<main style="grid-column: 1 / -1;">
+<div class="box bold-border shadow">
+<div class="box-header bg-purple">AD NETWORK</div>
+<div class="box-content">
+<p>Ad revenue is split 50/50 between the creator and the platform.</p>
+</div>
+</div>
+</main>
+</div>
+
+<footer>
+<p>© 2024 IRL.TV Network. The World Is Yours.</p>
+</footer>
+
+<script>
+const liveCreators = [
+{ id: 1, name: "DataDrifter", clout: 15400, type: "Authority", likes: 2400, desc: "Late night synth sessions.", visualType: "matrix" },
+{ id: 2, name: "NeonUnderdog", clout: 45, type: "Underdog", likes: 8, desc: "Testing my new rig from the basement.", visualType: "static" },
+{ id: 3, name: "GlitchQueen", clout: 8900, type: "Rising", likes: 1205, desc: "Visualizing the void. High energy.", visualType: "waves" },
+{ id: 4, name: "Unknown_User_9", clout: 12, type: "Underdog", likes: 1, desc: "Hello? Is this thing on?", visualType: "static" },
+{ id: 5, name: "VectorKing", clout: 25000, type: "Elite", likes: 15200, desc: "Professional simulation architecture.", visualType: "grid" }
+];
+
+let isAFK = false;
+
+function showPage(id) {
+document.querySelectorAll('.page-section').forEach(p => p.style.display = 'none');
+document.querySelectorAll('#mainNav button').forEach(b => b.classList.remove('active'));
+document.getElementById(id).style.display = 'grid';
+const navBtn = document.getElementById('nav-' + id);
+if (navBtn) navBtn.classList.add('active');
+if (id === 'watchView') renderFeed();
+window.scrollTo(0,0);
+}
+
+function renderFeed() {
+const feed = document.getElementById('discoveryFeed');
+const sidebar = document.getElementById('sidebarList');
+if(!feed || !sidebar) return;
+feed.innerHTML = '';
+sidebar.innerHTML = '';
+
+const sorted = [...liveCreators].sort((a, b) => {
+const aBoost = a.type === 'Underdog' ? Math.random() * 20000 : 0;
+const bBoost = b.type === 'Underdog' ? Math.random() * 20000 : 0;
+return (b.clout + bBoost) - (a.clout + aBoost);
+});
+
+sorted.forEach(c => {
+const sItem = document.createElement('div');
+sItem.style = "padding:10px; border-bottom:1px solid #eee; font-size:0.7rem; display:flex; justify-content:space-between; align-items:center;";
+sItem.innerHTML = `<span><b>@${c.name}</b></span> <span style="font-size:0.5rem; color:#666;">${c.clout} Clout</span>`;
+sidebar.appendChild(sItem);
+
+const card = document.createElement('div');
+card.className = "video-card";
+
+let visualStyles = '';
+if(c.type === 'Underdog') visualStyles = 'filter: grayscale(1) contrast(1.5); opacity: 0.6;';
+if(c.type === 'Elite') visualStyles = 'border-color: var(--yellow); box-shadow: 0 0 20px rgba(250, 255, 0, 0.3);';
+
+card.innerHTML = `
+<div class="algorithm-label">${c.type === 'Underdog' ? '🚀 BOOSTED UNDERDOG' : '⭐ VERIFIED AUTHORITY'}</div>
+<div class="live-indicator"><div class="live-dot"></div> LIVE</div>
+<div class="video-aspect">
+<div class="sim-placeholder">
+<div class="sim-visual" style="${visualStyles}"></div>
+<div style="margin-top:20px; font-size:0.5rem; color:rgba(255,255,255,0.3); letter-spacing:2px;">
+[ SIMULATION_DATA_STREAM_${c.id} ]
+</div>
+</div>
+</div>
+<div class="action-bar">
+<div class="action-btn" onclick="likeCreator(${c.id}, this)">
+<span style="font-size:1.2rem">❤️</span>
+<span class="count">${c.likes}</span>
+</div>
+</div>
+<div class="video-overlay">
+<div class="creator-tag">@${c.name} ${c.clout > 5000 ? '<span class="badge">AUTHORITY</span>' : ''}</div>
+<div style="font-size:0.8rem; opacity:0.9">${c.desc}</div>
+</div>
+`;
+feed.appendChild(card);
+});
+}
+
+function likeCreator(id, btn) {
+const creator = liveCreators.find(c => c.id === id);
+if (btn.classList.contains('liked')) {
+creator.likes--;
+creator.clout -= 5;
+btn.classList.remove('liked');
+} else {
+creator.likes++;
+creator.clout += 25;
+btn.classList.add('liked');
+}
+btn.querySelector('.count').innerText = creator.likes;
+renderFeed();
+}
+
+function toggleLive() {
+const btn = document.getElementById('liveToggle');
+const afkBtn = document.getElementById('afkToggle');
+const monitor = document.getElementById('myMonitor');
+const signal = document.getElementById('mySignal');
+const visual = document.getElementById('myVisual');
+
+if (btn.innerText === "GO LIVE") {
+btn.innerText = "END STREAM";
+btn.classList.replace('bg-green', 'bg-red');
+afkBtn.style.display = "block";
+signal.innerText = "[ LIVE ]";
+signal.style.color = "var(--red)";
+visual.style.display = "block";
+monitor.style.borderColor = "var(--red)";
+} else {
+location.reload();
+}
+}
+
+function toggleAFK() {
+const afkBtn = document.getElementById('afkToggle');
+const signal = document.getElementById('mySignal');
+const visual = document.getElementById('myVisual');
+const monitor = document.getElementById('myMonitor');
+isAFK = !isAFK;
+if (isAFK) {
+afkBtn.innerText = "BACK FROM AFK";
+afkBtn.classList.replace('bg-purple', 'bg-blue');
+signal.innerText = "[ AFK - AD BREAK ]";
+signal.style.color = "var(--purple)";
+visual.style.borderColor = "var(--purple)";
+visual.style.animation = "pulse 0.5s infinite ease-in-out";
+monitor.style.borderColor = "var(--purple)";
+} else {
+afkBtn.innerText = "AFK (AD BREAK)";
+afkBtn.classList.replace('bg-blue', 'bg-purple');
+signal.innerText = "[ LIVE ]";
+signal.style.color = "var(--red)";
+visual.style.borderColor = "var(--green)";
+visual.style.animation = "pulse 2s infinite ease-in-out";
+monitor.style.borderColor = "var(--red)";
+}
+}
+
+window.onload = () => showPage('watchView');
+</script>
+</body>
+</html>
+
+
