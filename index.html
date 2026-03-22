@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>INREALLIFE - Unified Grid</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -15,22 +15,17 @@
             --neo-red: #ef4444;
             --neo-green: #39ff14;
             --neo-magenta: #ff00ff;
-            --neo-orange: #ff6b00;
+            --neo-cyan: #00ffff;
         }
 
         @keyframes marquee {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
         }
 
-        @keyframes recording-blink {
+        @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0; }
-        }
-
-        @keyframes disk-pulse {
-            0%, 100% { filter: drop-shadow(0 0 2px var(--neo-green)); }
-            50% { filter: drop-shadow(0 0 8px var(--neo-green)); }
         }
 
         body {
@@ -45,7 +40,6 @@
             color: black;
             padding: 15px;
             overflow-x: hidden;
-            touch-action: manipulation;
         }
 
         #appContainer { width: 100%; max-width: 440px; position: relative; }
@@ -79,134 +73,52 @@
             text-align: center;
             cursor: pointer;
             text-transform: uppercase;
-            transition: all 0.1s;
+            transition: all 0.05s;
             user-select: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px black; }
-        .pixel-btn.disabled { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
-
-        .disk-terminal {
-            background: #111;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            border: 4px solid black;
-            box-shadow: 6px 6px 0px black;
-            margin-bottom: 20px;
             position: relative;
-            z-index: 100;
+        }
+        .pixel-btn:active { 
+            transform: translate(2px, 2px); 
+            box-shadow: 1px 1px 0px black; 
+            filter: brightness(1.5) saturate(1.5);
+        }
+        .pixel-btn.disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
+
+        /* Color Variants */
+        .btn-sync { background-color: var(--neo-blue); color: white; }
+        .btn-record { background-color: var(--neo-red); color: white; }
+        .btn-snap { background-color: var(--neo-yellow); color: black; }
+        .btn-donate { background-color: var(--neo-magenta); color: white; }
+        .btn-live { background-color: var(--neo-green); color: black; }
+
+        /* Disk UI */
+        .disk-drive {
+            background: #111;
+            border: 4px solid black;
+            padding: 20px;
+            text-align: center;
+            color: var(--neo-green);
+            font-family: 'Press Start 2P', cursive;
         }
 
-        .disk-slot-opening {
-            background: #000;
-            width: 120px;
+        .progress-bar {
+            width: 100%;
             height: 12px;
             border: 2px solid #333;
-            border-radius: 4px;
-            box-shadow: inset 0 0 10px rgba(0,255,0,0.2);
+            background: #000;
+            margin: 20px 0;
             position: relative;
-        }
-
-        .disk-slot-opening::after {
-            content: '';
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 4px;
-            background: var(--neo-green);
-            border-radius: 50%;
-            animation: recording-blink 0.5s infinite;
-        }
-
-        #draggableFloppy {
-            width: 80px;
-            height: 80px;
-            cursor: grab;
-            touch-action: none;
-            user-select: none;
-            position: relative;
-            z-index: 1001;
-            transition: transform 0.1s ease-out;
-        }
-        #draggableFloppy:active { cursor: grabbing; }
-        #draggableFloppy.dragging {
-            filter: drop-shadow(0 0 15px var(--neo-green));
-            opacity: 0.8;
-            transform: scale(1.1);
-        }
-
-        .floppy-icon {
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-            color: var(--neo-green);
-        }
-
-        .drop-target {
-            transition: all 0.3s ease;
-        }
-        .drop-target.hovered {
-            background-color: #dcfce7 !important;
-            border-color: var(--neo-green) !important;
-            box-shadow: 0 0 20px var(--neo-green);
-        }
-
-        .camera-container {
-            position: relative;
-            background: black;
-            aspect-ratio: 4/3;
-            border: 4px solid #333;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: filter 0.1s ease-out;
         }
 
-        #videoElement, .captured-video {
-            width: 100%;
+        .progress-fill {
             height: 100%;
-            object-fit: cover;
-            filter: contrast(1.1) brightness(1.1) sepia(0.2);
-        }
-        
-        .palette-orochi { filter: contrast(1.5) brightness(0.8) hue-rotate(280deg) !important; }
-        .palette-gold { filter: contrast(1.2) sepia(1) saturate(5) !important; }
-        .palette-cyber { filter: invert(1) hue-rotate(180deg) !important; }
-
-        .rec-indicator {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            color: #ef4444;
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            z-index: 20;
-            animation: recording-blink 1s infinite;
+            background: var(--neo-green);
+            width: 0%;
+            transition: width 0.1s linear;
         }
 
-        .scanline-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 2px 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
+        /* Feed */
         .feed-container {
             height: 600px;
             overflow-y: scroll;
@@ -239,6 +151,20 @@
             text-shadow: 2px 2px 0px black;
         }
 
+        .marquee-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            font-size: 8px;
+            margin-top: 4px;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 10s linear infinite;
+        }
+
         .social-sidebar {
             position: absolute;
             right: 15px;
@@ -258,28 +184,46 @@
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            transition: color 0.2s;
         }
+        .social-btn span { font-family: 'Press Start 2P'; font-size: 6px; margin-top: 5px; }
 
-        .social-btn span {
+        .donate-btn-sidebar {
+            background: var(--neo-magenta);
+            border: 2px solid black;
+            padding: 8px;
+            color: white;
             font-family: 'Press Start 2P';
             font-size: 6px;
             margin-top: 5px;
+            box-shadow: 2px 2px 0px black;
         }
 
-        .marquee-container {
-            width: 150px;
+        /* Camera */
+        .camera-container {
+            aspect-ratio: 9/16;
+            background: #000;
+            border: 4px solid black;
+            position: relative;
             overflow: hidden;
-            white-space: nowrap;
-            background: rgba(0,0,0,0.5);
-            padding: 2px 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-family: 'Press Start 2P';
             font-size: 8px;
-            border: 1px solid #39ff14;
+            z-index: 20;
+            background: black;
+            padding: 4px 8px;
+            border: 1px solid currentColor;
         }
-        .marquee-text {
-            display: inline-block;
-            animation: marquee 10s linear infinite;
-        }
+
+        .badge-live { color: #39ff14; border-color: #39ff14; animation: blink 1.5s infinite; }
+        .badge-rec { color: #ef4444; border-color: #ef4444; animation: blink 0.8s infinite; }
 
         #loadingOverlay {
             display: flex;
@@ -288,81 +232,34 @@
             background: rgba(0,0,0,1); color: #39ff14;
             z-index: 5000; justify-content: center; align-items: center;
             font-family: 'Press Start 2P', cursive; text-align: center;
+            transition: opacity 0.5s;
         }
 
-        #chatBox { 
-            height: 160px; 
-            overflow-y: auto; 
-            scrollbar-width: none; 
-            background: #000; 
-            border: 4px solid black; 
-            padding: 10px; 
-            color: #39ff14; 
-            font-family: 'Courier Prime'; 
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        #chatBox::-webkit-scrollbar { display: none; }
-        
-        .chat-msg {
-            font-size: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            border-left: 2px solid #39ff14;
-            padding-left: 8px;
-            margin-bottom: 4px;
-            animation: slideIn 0.2s ease-out;
-        }
-        .chat-msg.system { border-left-color: #ef4444; color: #ef4444; }
-        .chat-msg.donation { border-left-color: #facc15; color: #facc15; background: rgba(250, 204, 21, 0.1); }
-
-        @keyframes slideIn {
-            from { transform: translateX(-10px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        .scanline-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 2px 100%;
+            pointer-events: none;
+            z-index: 10;
         }
 
-        .error-toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #ef4444;
+        /* Live Indicator for discover feed */
+        .live-tag {
+            background: red;
             color: white;
-            padding: 10px 20px;
-            border: 2px solid black;
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            z-index: 9999;
-            box-shadow: 4px 4px 0px black;
-        }
-
-        #adSplash {
-            position: fixed;
-            top:0; left:0; width:100%; height:100%;
-            background: black; z-index: 10000;
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center;
-            color: white; font-family: 'Press Start 2P';
+            padding: 2px 4px;
+            font-size: 6px;
+            margin-bottom: 4px;
+            display: inline-block;
         }
     </style>
 </head>
 <body>
 
-    <div id="adSplash">
-        <div class="text-neo-red text-xl mb-4">CHALLENGER APPROACHING!</div>
-        <div class="neo-box w-64 bg-white text-black p-4 text-center">
-            <div class="text-[10px] mb-4">SPONSORED BY:</div>
-            <div class="text-lg font-bold">NEO-DRINK</div>
-            <div class="text-[8px] mt-2">GIVE YOUR LIFE A REBOOT.</div>
-        </div>
-        <div id="adTimer" class="mt-8 text-[10px]">REWARD IN 5...</div>
-    </div>
-
     <div id="loadingOverlay">
         <div>
             <div class="animate-pulse mb-4 text-sm">BOOTING NEOGEO_OS...</div>
-            <div class="text-[8px] opacity-50 mb-6">CONNECTING TO GRID_NETWORK...</div>
             <button onclick="hideOverlay()" class="pixel-btn bg-white text-black text-[8px] mx-auto px-4 py-2 block">SKIP BIOS</button>
         </div>
     </div>
@@ -370,47 +267,38 @@
     <div id="appContainer">
         <!-- NAVIGATION -->
         <div id="mainNav" class="hidden">
-            <div class="flex justify-between items-center mb-2 px-1">
-                <div id="userDisplay" class="text-[6px] font-['Press_Start_2P'] opacity-50 truncate w-32">UID: AUTH...</div>
-                <div id="creditsDisplay" class="text-[8px] font-['Press_Start_2P'] text-neo-yellow">0.00 CR</div>
-            </div>
-            <div class="grid grid-cols-2 gap-3 pt-2 mb-3">
+            <div class="grid grid-cols-2 gap-3 pt-4 mb-3">
                 <div id="nav-profile" class="pixel-btn bg-white" onclick="switchPage('profile')">MY ARCHIVE</div>
-                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">BROADCAST</div>
+                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">LIVE UPLINK</div>
             </div>
             <div class="grid grid-cols-3 gap-2 mb-6">
-                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">THE GRID</div>
-                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">INSERT COIN</div>
+                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
+                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
                 <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
             </div>
         </div>
 
         <!-- AUTH ENTRANCE -->
-        <div id="authView" class="block">
-            <div class="neo-box bg-[#0056b3] text-white p-10 text-center mb-6">
-                <h1 class="text-3xl font-bold font-['Press_Start_2P'] uppercase tracking-tighter">INREALLIFE</h1>
+        <div id="authView" class="block space-y-4">
+            <div class="neo-box bg-[#0056b3] text-white p-8 text-center border-black">
+                <h1 class="text-2xl font-bold font-['Press_Start_2P'] uppercase">INREALLIFE</h1>
                 <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">NO COOKIES. NO MASTERS.</div>
             </div>
 
-            <div class="disk-terminal">
-                <div class="text-[7px] text-[#39ff14] font-['Press_Start_2P'] tracking-widest mb-2">DISK_DRIVE_A:</div>
-                <div id="draggableFloppy">
-                    <svg class="floppy-icon" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M1 1H13L15 3V15H1V1Z"/>
-                        <rect x="3" y="1" width="8" height="4" fill="white" fill-opacity="0.3"/>
-                        <rect x="4" y="10" width="8" height="5" fill="white" fill-opacity="0.8"/>
-                        <rect x="9" y="11" width="2" height="3" fill="black" fill-opacity="0.2"/>
-                    </svg>
+            <div class="neo-box disk-drive shadow-[6px_6px_0px_black]">
+                <div class="text-[8px] mb-4 opacity-60">DISK_DRIVE_A:</div>
+                <div id="diskStatus">
+                    <div class="progress-bar">
+                        <div id="bootProgress" class="progress-fill"></div>
+                    </div>
+                    <div id="diskActionText" class="text-[8px]">READY TO BOOT</div>
                 </div>
-                <div class="disk-slot-opening"></div>
-                <div class="text-[6px] text-[#39ff14] opacity-50 font-['Press_Start_2P']">GRAB DISK TO BOOT</div>
             </div>
 
-            <div id="loginTarget" class="neo-box p-8 text-center drop-target">
-                <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase text-gray-400">WELCOME TO THE LAST SOCIAL NETWORK.</p>
-                <div class="pixel-btn w-full text-[0.7rem] py-6 bg-white pointer-events-none border-dashed opacity-70">
-                    DROP DISK HERE (START)
-                </div>
+            <div id="loginActionBox" class="neo-box p-6 text-center border-black">
+                <button id="loginBtn" class="pixel-btn w-full text-[0.7rem] py-6 bg-white border-dashed border-4" onclick="handleBoot()">
+                    INSERT DISK (START)
+                </button>
             </div>
         </div>
 
@@ -425,55 +313,27 @@
                     <div class="neo-header bg-[#facc15]">UPLINK_TERMINAL</div>
                     <div class="p-4">
                         <div class="camera-container mb-4">
-                            <div id="recIndicator" class="rec-indicator hidden">● REC</div>
-                            <video id="videoElement" autoplay playsinline class="hidden"></video>
-                            <canvas id="photoCanvas" class="hidden w-full h-full"></canvas>
+                            <div id="liveBadge" class="status-badge badge-live hidden">LIVE</div>
+                            <div id="recIndicator" class="status-badge badge-rec hidden">REC 5S</div>
+                            <video id="videoElement" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
                             <div id="cameraPlaceholder" class="font-['Press_Start_2P'] text-[8px] text-[#39ff14] text-center p-4">
-                                [ SIGNAL_LOST ]<br><br>ACTIVATE LENS TO BROADCAST
+                                [ SIGNAL_LOST ]<br><br>SYNC LENS TO BROADCAST
                             </div>
                             <div class="scanline-overlay"></div>
                         </div>
 
-                        <div class="mb-4">
-                            <div class="text-[8px] font-['Press_Start_2P'] mb-2 uppercase opacity-50">Lens Palettes</div>
-                            <div class="flex gap-2">
-                                <div onclick="setPalette('')" class="w-8 h-8 border-2 border-black bg-white cursor-pointer" title="Default"></div>
-                                <div onclick="tryUnlockPalette('palette-orochi', 10)" class="w-8 h-8 border-2 border-black bg-purple-600 cursor-pointer relative" title="Orochi (10 CR)">
-                                    <div id="lock-orochi" class="absolute inset-0 flex items-center justify-center text-[10px] text-white">🔒</div>
-                                </div>
-                                <div onclick="tryUnlockPalette('palette-gold', 50)" class="w-8 h-8 border-2 border-black bg-yellow-400 cursor-pointer relative" title="KOF Gold (50 CR)">
-                                    <div id="lock-gold" class="absolute inset-0 flex items-center justify-center text-[10px] text-black">🔒</div>
-                                </div>
+                        <!-- CONSOLIDATED COMMAND BOX -->
+                        <div class="neo-box bg-black p-3 space-y-3 shadow-none border-2">
+                            <div class="grid grid-cols-2 gap-3">
+                                <button id="btnInitCam" onclick="initCamera()" class="pixel-btn btn-sync">SYNC LENS</button>
+                                <button id="btnGoLive" onclick="toggleLive()" class="pixel-btn btn-live disabled">GO LIVE</button>
                             </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <button id="btnInitCam" onclick="initCamera()" class="pixel-btn bg-blue-500 text-white">SYNC LENS</button>
-                            <button id="btnCapture" onclick="takePhoto()" class="pixel-btn bg-yellow-400 disabled">SNAPSHOT</button>
-                            <button id="btnRecord" onclick="startRecording()" class="pixel-btn bg-red-500 text-white disabled">REC VIDEO</button>
-                            <button id="btnBroadcast" onclick="startBroadcast()" class="pixel-btn bg-red-600 text-white disabled">GO LIVE (GRID)</button>
-                        </div>
-                        
-                        <div id="donationModule" class="hidden border-t-2 border-dashed border-black pt-4">
-                            <div class="text-[8px] font-['Press_Start_2P'] mb-2 text-center text-neo-blue">DONATION_LINK: ACTIVE</div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button onclick="sendDonation(5.00)" class="pixel-btn bg-white py-2 text-[6px]">5.00 CR</button>
-                                <button onclick="sendDonation(20.00)" class="pixel-btn bg-white py-2 text-[6px]">20.00 CR</button>
-                                <button onclick="sendDonation(100.00)" class="pixel-btn bg-neo-yellow py-2 text-[6px]">100 CR</button>
+                                <button id="btnRecord" onclick="startRecording()" class="pixel-btn btn-record disabled">REC</button>
+                                <button id="btnSnap" onclick="takeSnapshot()" class="pixel-btn btn-snap disabled">SNAP</button>
+                                <button id="btnDonateSelf" onclick="donate(100)" class="pixel-btn btn-donate">DONATE</button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="neo-box">
-                    <div class="neo-header bg-black text-[#39ff14]">LIVE_COMMS & SPECTATORS</div>
-                    <div class="p-4 bg-black">
-                        <div id="chatBox">
-                            <div class="italic opacity-40 text-center py-4 text-[8px] text-white">Awaiting signal to open comms...</div>
-                        </div>
-                        <div class="mt-4 flex gap-2">
-                            <input id="chatInput" type="text" placeholder="POST COMMENT..." class="w-full bg-black border-2 border-[#39ff14] p-2 text-[8px] text-[#39ff14] font-['Press_Start_2P'] outline-none">
-                            <button onclick="sendChatMessage()" class="pixel-btn bg-[#39ff14] text-black px-4 py-0 text-[10px]">></button>
+                            <div id="recordStatus" class="text-[6px] text-[#39ff14] text-center font-['Press_Start_2P'] uppercase">COMMAND_READY_</div>
                         </div>
                     </div>
                 </div>
@@ -481,16 +341,10 @@
 
             <div id="page-ads" class="page-content hidden">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#ff00ff] text-white">TOKEN_EXCHANGE</div>
-                    <div class="p-6 text-center">
-                        <div class="text-[8px] uppercase mb-4 opacity-50">Current Balance</div>
-                        <div id="walletBalance" class="text-2xl font-bold mb-8 font-['Press_Start_2P'] text-neo-yellow">0.00 CR</div>
-                        
-                        <div class="grid grid-cols-1 gap-4">
-                            <button onclick="watchAd()" class="pixel-btn bg-white py-4">WATCH BOUT (REWARD: 1.00 CR)</button>
-                            <button class="pixel-btn bg-neo-yellow py-4">BUY 100 CR ($0.99)</button>
-                            <button class="pixel-btn bg-neo-blue text-white py-4">BUY 1000 CR ($4.99)</button>
-                        </div>
+                    <div class="neo-header bg-[#ff00ff] text-white">WALLET_STATUS</div>
+                    <div class="p-10 text-center font-['Press_Start_2P']">
+                        <div id="balanceDisplay" class="text-[14px] mb-4">0.00 CR</div>
+                        <div class="text-[8px] uppercase">GRID_CREDITS_FOUND</div>
                     </div>
                 </div>
             </div>
@@ -498,328 +352,53 @@
             <div id="page-profile" class="page-content hidden">
                 <div class="neo-box">
                     <div class="neo-header bg-[#facc15]">GRID_ARCHIVE</div>
-                    <div id="savedCaptures" class="p-4 grid grid-cols-2 gap-2 bg-gray-200 min-h-[150px]">
-                        <div class="text-[8px] opacity-40 col-span-2 text-center py-10 uppercase">No signal history found</div>
+                    <div id="savedCaptures" class="p-4 grid grid-cols-1 gap-4 bg-gray-200 min-h-[200px]">
+                        <div class="text-[8px] opacity-40 text-center py-10 uppercase">No signal history</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- FIREBASE SDK -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        let balance = 0;
+        let userId = "ANON";
+        let streamActive = false;
+        let isLive = false;
+        let mediaRecorder;
+        let recordedChunks = [];
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'inreallife-grid';
-        
-        let currentUser = null;
-        let userProfile = { credits: 0, unlockedPalettes: [] };
-        let feedData = [
-            { id: "p1", user: "Kyo_Esaka", likes: 120, comments: 45, music: "TEARS 2002", color: "#ef4444", text: "The flames are back." },
-            { id: "p2", user: "Iori_Yagami", likes: 666, comments: 88, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood." },
-            { id: "p3", user: "Terry_Wild", likes: 450, comments: 12, music: "11th STREET", color: "#2563eb", text: "Are you okay!?" }
+        const feedData = [
+            { id: 1, user: "Kyo_Esaka", likes: 120, music: "TEARS 2002", color: "#ef4444", text: "The flames are back.", isLive: false },
+            { id: 2, user: "Iori_Yagami", likes: 666, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood.", isLive: false }
         ];
 
-        window.initFirebaseAndShow = async () => {
-            // Safety timeout: if auth hasn't succeeded in 5 seconds, force bypass
-            const authTimeout = setTimeout(() => {
-                if (!currentUser) {
-                    console.warn("Auth timeout - bypassing to main app as guest");
-                    showMainApp();
-                    showToast("GRID_SYNC_TIMEOUT: GUEST_MODE");
-                }
-            }, 5000);
-
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && __initial_auth_token !== "") {
-                    try {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } catch (tokenErr) {
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (authErr) {
-                console.error("Critical Auth Failure:", authErr);
-                showToast("GRID CONNECTION ERROR - BYPASSING");
-                showMainApp();
-            } finally {
-                clearTimeout(authTimeout);
-            }
-        };
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('userDisplay').innerText = `UID: ${user.uid.substring(0,8)}...`;
-                showMainApp();
-                setupListeners();
-            }
-        });
-
-        function setupListeners() {
-            if (!currentUser) return;
-
-            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-            onSnapshot(profileDoc, (docSnap) => {
-                if (docSnap.exists()) {
-                    userProfile = docSnap.data();
-                    updateWalletUI();
-                } else {
-                    setDoc(profileDoc, { credits: 0, unlockedPalettes: [] });
-                }
-            }, (err) => console.error(err));
-
-            const archiveCol = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'archive');
-            onSnapshot(archiveCol, (snapshot) => {
-                const gallery = document.getElementById('savedCaptures');
-                gallery.innerHTML = '';
-                if (snapshot.empty) {
-                    gallery.innerHTML = '<div class="text-[8px] opacity-40 col-span-2 text-center py-10 uppercase">No signal history found</div>';
-                    return;
-                }
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    renderToGallery(data.data, data.type, docSnap.id);
-                });
-            }, (err) => console.error(err));
-
-            const likesCol = collection(db, 'artifacts', appId, 'public', 'data', 'global_likes');
-            onSnapshot(likesCol, (snapshot) => {
-                const globalLikes = {};
-                snapshot.forEach(docSnap => {
-                    globalLikes[docSnap.id] = docSnap.data().count || 0;
-                });
-                renderFeed(globalLikes);
-            }, (err) => console.error(err));
-
-            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
-            onSnapshot(chatCol, (snapshot) => {
-                const chatBox = document.getElementById('chatBox');
-                chatBox.innerHTML = '';
-                const msgs = [];
-                snapshot.forEach(docSnap => msgs.push({ id: docSnap.id, ...docSnap.data() }));
-                msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-                
-                msgs.slice(-50).forEach(msg => {
-                    const div = document.createElement('div');
-                    const typeClass = msg.type || 'user';
-                    div.className = `chat-msg ${typeClass}`;
-                    
-                    if (typeClass === 'system') {
-                        div.innerHTML = `[ALERT] ${msg.text}`;
-                    } else if (typeClass === 'donation') {
-                        div.innerHTML = `[GIFT] ${msg.user?.substring(0,4)} DONATED ${msg.amount} CR!`;
-                    } else {
-                        div.innerHTML = `<span class="text-white opacity-40">${msg.user?.substring(0,6)}:</span> ${msg.text}`;
-                    }
-                    chatBox.appendChild(div);
-                });
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }, (err) => console.error(err));
-        }
-
-        window.sendChatMessage = async (text = null, type = 'user', extra = {}) => {
-            const input = document.getElementById('chatInput');
-            const msgText = text || input.value;
-            if (!msgText && type !== 'donation') return;
-            if (!currentUser) {
-                showToast("SYNC_REQUIRED_FOR_COMMS");
-                return;
-            }
-            
-            try {
-                const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
-                await addDoc(chatCol, {
-                    user: currentUser.uid,
-                    text: msgText || '',
-                    type: type,
-                    ...extra,
-                    timestamp: serverTimestamp()
-                });
-                if (!text && type === 'user') input.value = "";
-            } catch (e) {
-                console.error("Chat failed:", e);
-            }
-        };
-
-        window.sendDonation = async (amount) => {
-            if (!currentUser) return;
-            if (userProfile.credits < amount) {
-                showToast("INSUFFICIENT CREDITS");
-                return;
-            }
-            try {
-                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(profileDoc, { credits: userProfile.credits - amount });
-                window.sendChatMessage(null, 'donation', { amount: amount });
-                showToast(`GIFT SENT: ${amount} CR`);
-            } catch (e) { showToast("GIFT_FAILED"); }
-        };
-
-        window.updateWalletUI = () => {
-            const balance = (userProfile.credits || 0).toFixed(2);
-            document.getElementById('creditsDisplay').innerText = `${balance} CR`;
-            document.getElementById('walletBalance').innerText = `${balance} CR`;
-            if (userProfile.unlockedPalettes?.includes('palette-orochi')) document.getElementById('lock-orochi').innerText = '✓';
-            if (userProfile.unlockedPalettes?.includes('palette-gold')) document.getElementById('lock-gold').innerText = '✓';
-        };
-
-        window.watchAd = async () => {
-            const splash = document.getElementById('adSplash');
-            const timer = document.getElementById('adTimer');
-            splash.style.display = 'flex';
-            let count = 5;
-            const interval = setInterval(() => {
-                count--;
-                timer.innerText = `REWARD IN ${count}...`;
-                if (count <= 0) {
-                    clearInterval(interval);
-                    splash.style.display = 'none';
-                    rewardUser(1.00);
-                    showToast("REWARD COLLECTED: 1.00 CR");
-                }
-            }, 1000);
-        };
-
-        async function rewardUser(amount) {
-            if (!currentUser) return;
-            try {
-                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(profileDoc, { credits: (userProfile.credits || 0) + amount });
-            } catch (e) { console.error(e); }
-        }
-
-        window.tryUnlockPalette = async (paletteName, cost) => {
-            if (!currentUser) return;
-            if (userProfile.unlockedPalettes?.includes(paletteName)) {
-                window.setPalette(paletteName);
-                return;
-            }
-            if (userProfile.credits >= cost) {
-                try {
-                    const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                    await updateDoc(profileDoc, {
-                        credits: userProfile.credits - cost,
-                        unlockedPalettes: [...(userProfile.unlockedPalettes || []), paletteName]
-                    });
-                    showToast(`UNLOCKED: ${paletteName.toUpperCase()}`);
-                    window.setPalette(paletteName);
-                } catch (e) { showToast("UNLOCK_FAILED"); }
-            } else {
-                showToast(`NEED ${cost} CR`);
-            }
-        };
-
-        window.toggleLike = async (postId) => {
-            if (!currentUser) return;
-            try {
-                const likeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_likes', postId);
-                const docSnap = await getDoc(likeDocRef);
-                let count = docSnap.exists() ? docSnap.data().count : 0;
-                await setDoc(likeDocRef, { count: count + 1 });
-            } catch (e) { console.error(e); }
-        };
-
-        window.persistToArchive = async (dataUrl, type) => {
-            if (!currentUser) return;
-            try {
-                const archiveCol = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'archive');
-                await addDoc(archiveCol, { type, data: dataUrl, timestamp: serverTimestamp() });
-                window.sendChatMessage(`UID:${currentUser.uid.substring(0,4)} CAPTURED NEW ${type.toUpperCase()} SIGNAL.`, 'system');
-            } catch (error) {
-                console.error(error);
-                showToast("SIGNAL OVERFLOW");
-            }
-        };
-
-        window.deleteFromArchive = async (docId) => {
-            if (!currentUser) return;
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'archive', docId);
-                await deleteDoc(docRef);
-            } catch (e) { console.error(e); }
-        };
-
-        function showToast(msg) {
-            const toast = document.createElement('div');
-            toast.className = 'error-toast';
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        function renderFeed(globalLikes = {}) {
-            const feed = document.getElementById('discoverFeed');
-            feed.innerHTML = feedData.map(item => {
-                const likesCount = globalLikes[item.id] || item.likes;
-                return `
-                    <div class="feed-item">
-                        <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
-                            <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
-                        </div>
-                        <div class="social-sidebar">
-                            <button class="social-btn text-white" onclick="toggleLike('${item.id}')">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
-                                <span>${likesCount}</span>
-                            </button>
-                            <button class="social-btn" onclick="switchPage('channel')">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
-                                <span>COMMS</span>
-                            </button>
-                            <button class="social-btn" onclick="copyGridLink()">
-                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.637-2.31l-4.94-2.47a3 3 0 00-.02-.319z"/></svg>
-                                <span>SHARE</span>
-                            </button>
-                        </div>
-                        <div class="feed-ui">
-                            <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
-                            <div class="text-[8px] mb-4">${item.text}</div>
-                            <div class="marquee-container">
-                                <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderToGallery(src, type, docId) {
-            const gallery = document.getElementById('savedCaptures');
-            if (gallery.innerText.includes('No signal history')) gallery.innerHTML = '';
-            const element = document.createElement('div');
-            element.className = "relative border-2 border-black shadow-[2px_2px_0px_black] overflow-hidden group h-32";
-            if (type === 'image') element.innerHTML = `<img src="${src}" class="w-full h-full object-cover">`;
-            else element.innerHTML = `<video src="${src}" class="captured-video h-full w-full object-cover" autoplay loop muted></video><div class="scanline-overlay"></div>`;
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = "X";
-            delBtn.className = "absolute top-0 left-0 bg-red-600 text-white text-[8px] p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50";
-            delBtn.onclick = (e) => { e.stopPropagation(); window.deleteFromArchive(docId); };
-            element.appendChild(delBtn);
-            gallery.prepend(element);
-        }
-
-        renderFeed();
-
-        // Exposed functions to standard script
-        window.showMainApp = showMainApp;
-        window.showToast = showToast;
-    </script>
-
-    <script>
         function hideOverlay() {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.style.opacity = '0';
-                setTimeout(() => overlay.style.display = 'none', 500);
-            }
+            document.getElementById('loadingOverlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);
+        }
+
+        function handleBoot() {
+            const btn = document.getElementById('loginBtn');
+            const progress = document.getElementById('bootProgress');
+            const text = document.getElementById('diskActionText');
+            const actionBox = document.getElementById('loginActionBox');
+
+            btn.classList.add('disabled');
+            text.innerText = "BOOTING...";
+            
+            let width = 0;
+            const interval = setInterval(() => {
+                width += Math.random() * 20;
+                if (width >= 100) {
+                    width = 100;
+                    clearInterval(interval);
+                    userId = 'GRID_' + Math.random().toString(36).substr(2, 6).toUpperCase();
+                    actionBox.innerHTML = `<div class="font-['Press_Start_2P'] text-[8px] text-green-600">DISK ACCEPTED. HI ${userId}</div>`;
+                    setTimeout(showMainApp, 1000);
+                }
+                progress.style.width = width + '%';
+            }, 100);
         }
 
         function showMainApp() {
@@ -832,180 +411,179 @@
         function switchPage(id) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.pixel-btn').forEach(b => {
-                if (!b.id || !b.id.startsWith('nav-')) return;
-                b.classList.remove('bg-[#39ff14]', 'text-black', 'bg-[#ff00ff]', 'text-white');
+                if (!b.id?.startsWith('nav-')) return;
+                b.classList.remove('bg-[#39ff14]', 'bg-[#ff00ff]', 'text-white', 'text-black');
                 b.classList.add('bg-white', 'text-black');
             });
-            const page = document.getElementById('page-' + id);
-            if (page) page.classList.remove('hidden');
+
+            document.getElementById('page-' + id).classList.remove('hidden');
             const navBtn = document.getElementById('nav-' + id);
             if(navBtn) {
                 navBtn.classList.remove('bg-white');
-                if (id === 'ads') navBtn.classList.add('bg-[#ff00ff]', 'text-white');
-                else navBtn.classList.add('bg-[#39ff14]', 'text-black');
+                navBtn.classList.add(id === 'ads' ? 'bg-[#ff00ff]' : 'bg-[#39ff14]');
+                if (id === 'ads') navBtn.classList.add('text-white');
             }
+            if (id === 'discover') renderFeed();
+            if (id === 'ads') updateBalance();
         }
 
-        function setPalette(cls) {
-            const v = document.getElementById('videoElement');
-            const c = document.getElementById('photoCanvas');
-            if (v) v.className = cls;
-            if (c) c.className = 'hidden w-full h-full ' + cls;
+        function updateBalance() {
+            const display = document.getElementById('balanceDisplay');
+            if (display) display.innerText = balance.toFixed(2) + " CR";
         }
 
-        function copyGridLink() {
-            const dummy = document.createElement("input");
-            document.body.appendChild(dummy);
-            dummy.value = window.location.href;
-            dummy.select();
-            document.execCommand("copy");
-            document.body.removeChild(dummy);
+        function donate(amount) {
+            balance += amount;
+            updateBalance();
+            const status = document.getElementById('recordStatus');
+            status.innerText = `+${amount} CR ADDED TO GRID`;
+            setTimeout(() => { status.innerText = isLive ? "UPLINK_STABLE" : "COMMAND_READY_"; }, 2000);
         }
 
-        let video = document.getElementById('videoElement');
-        let canvas = document.getElementById('photoCanvas');
-        let stream = null;
-        let mediaRecorder = null;
-        let recordedChunks = [];
+        function renderFeed() {
+            const feed = document.getElementById('discoverFeed');
+            feed.innerHTML = feedData.map(item => `
+                <div class="feed-item">
+                    <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
+                        <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
+                    </div>
+                    <div class="social-sidebar">
+                        <button class="social-btn" onclick="donate(10)">
+                            <div class="donate-btn-sidebar">DONATE 10</div>
+                        </button>
+                        <button class="social-btn" onclick="donate(50)">
+                            <div class="donate-btn-sidebar" style="background:var(--neo-yellow);color:black">TIP 50</div>
+                        </button>
+                    </div>
+                    <div class="feed-ui">
+                        ${item.isLive ? '<div class="live-tag font-["Press_Start_2P"]">LIVE BROADCAST</div>' : ''}
+                        <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
+                        <div class="text-[8px] mb-4">${item.text}</div>
+                        <div class="marquee-container">
+                            <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
         async function initCamera() {
-            const btn = document.getElementById('btnInitCam');
-            const placeholder = document.getElementById('cameraPlaceholder');
-            btn.innerText = "LINKING...";
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360, facingMode: "user" }, audio: false });
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                const video = document.getElementById('videoElement');
                 video.srcObject = stream;
-                video.onloadedmetadata = () => {
-                    video.play();
-                    video.classList.remove('hidden');
-                    placeholder.classList.add('hidden');
-                    document.getElementById('btnCapture').classList.remove('disabled');
-                    document.getElementById('btnRecord').classList.remove('disabled');
-                    btn.innerText = "LENS ACTIVE";
-                    btn.classList.add('bg-green-500');
-                };
-            } catch (err) { btn.innerText = "LINK FAILED"; }
+                video.classList.remove('hidden');
+                document.getElementById('cameraPlaceholder').classList.add('hidden');
+                document.getElementById('btnRecord').classList.remove('disabled');
+                document.getElementById('btnSnap').classList.remove('disabled');
+                document.getElementById('btnGoLive').classList.remove('disabled');
+                streamActive = true;
+                
+                mediaRecorder = new MediaRecorder(stream);
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+                mediaRecorder.onstop = saveVideo;
+                
+                document.getElementById('btnInitCam').innerText = "LENS_SYNCED";
+                document.getElementById('btnInitCam').classList.add('brightness-150');
+            } catch (err) { alert("SIGNAL BLOCKED. CAMERA REQ."); }
         }
 
-        async function takePhoto() {
-            if (!stream) return;
-            const container = document.querySelector('.camera-container');
-            container.style.filter = 'brightness(3)';
-            setTimeout(() => container.style.filter = '', 100);
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.filter = getComputedStyle(video).filter;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imgData = canvas.toDataURL('image/jpeg', 0.5); 
-            window.persistToArchive(imgData, 'image');
-            canvas.classList.remove('hidden');
-            video.classList.add('hidden');
-            document.getElementById('btnBroadcast').classList.remove('disabled');
+        function toggleLive() {
+            if (!streamActive) return;
+            isLive = !isLive;
+            const btn = document.getElementById('btnGoLive');
+            const badge = document.getElementById('liveBadge');
+            const status = document.getElementById('recordStatus');
+
+            if (isLive) {
+                btn.innerText = "END LIVE";
+                btn.style.backgroundColor = "white";
+                btn.style.color = "red";
+                badge.classList.remove('hidden');
+                status.innerText = "UPLINKING TO DISCOVERY GRID...";
+                
+                // Add current user to feed
+                feedData.unshift({
+                    id: Date.now(),
+                    user: userId,
+                    likes: 0,
+                    music: "LIVE BROADCAST",
+                    color: "#39ff14",
+                    text: "Broadcasting live from the terminal.",
+                    isLive: true
+                });
+            } else {
+                btn.innerText = "GO LIVE";
+                btn.style.backgroundColor = "var(--neo-green)";
+                btn.style.color = "black";
+                badge.classList.add('hidden');
+                status.innerText = "UPLINK TERMINATED";
+                
+                // Remove user from feed
+                const index = feedData.findIndex(f => f.user === userId);
+                if (index > -1) feedData.splice(index, 1);
+            }
         }
 
         function startRecording() {
-            if (!stream) return;
+            if (!streamActive) return;
             recordedChunks = [];
-            mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-            mediaRecorder.onstop = () => {
-                const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(blob);
-                reader.onloadend = () => window.persistToArchive(reader.result, 'video');
-                document.getElementById('recIndicator').classList.add('hidden');
-                document.getElementById('btnRecord').innerText = "REC VIDEO";
-                document.getElementById('btnBroadcast').classList.remove('disabled');
-            };
             mediaRecorder.start();
             document.getElementById('recIndicator').classList.remove('hidden');
-            document.getElementById('btnRecord').innerText = "STOPPING...";
-            setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); }, 2500);
+            document.getElementById('btnRecord').classList.add('disabled');
+            document.getElementById('recordStatus').innerText = "BUFFERING SIGNAL...";
+            
+            setTimeout(() => {
+                mediaRecorder.stop();
+                document.getElementById('recIndicator').classList.add('hidden');
+                document.getElementById('btnRecord').classList.remove('disabled');
+                document.getElementById('recordStatus').innerText = "SIGNAL CAPTURED";
+            }, 5000);
         }
 
-        function startBroadcast() {
-            window.sendChatMessage(`USER IS NOW STREAMING LIVE ON THE GRID. COMMENCE OBSERVATION.`, 'system');
-            document.getElementById('btnBroadcast').innerText = "BROADCASTING";
-            document.getElementById('btnBroadcast').classList.add('bg-green-600');
-            document.getElementById('donationModule').classList.remove('hidden');
+        function takeSnapshot() {
+            if (!streamActive) return;
+            const video = document.getElementById('videoElement');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            const url = canvas.toDataURL('image/png');
+            saveToArchive(url, 'image');
+            
+            document.getElementById('recordStatus').innerText = "SNAPSHOT SAVED";
+            setTimeout(() => { document.getElementById('recordStatus').innerText = isLive ? "UPLINK_STABLE" : "COMMAND_READY_"; }, 2000);
         }
 
-        // DRAG AND DROP LOGIC
-        const floppy = document.getElementById('draggableFloppy');
-        const target = document.getElementById('loginTarget');
-        let isDragging = false;
-        let startX, startY;
+        function saveVideo() {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            saveToArchive(url, 'video');
+        }
 
-        const handleDragStart = (e) => {
-            isDragging = true;
-            floppy.classList.add('dragging');
-            const touch = e.type === 'touchstart' ? e.touches[0] : e;
-            startX = touch.clientX;
-            startY = touch.clientY;
-        };
-
-        const handleDragMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            const touch = e.type === 'touchmove' ? e.touches[0] : e;
-            const deltaX = touch.clientX - startX;
-            const deltaY = touch.clientY - startY;
-
-            floppy.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
-            const floppyRect = floppy.getBoundingClientRect();
-            const targetRect = target.getBoundingClientRect();
-
-            const isHovering = (
-                floppyRect.left < targetRect.right &&
-                floppyRect.right > targetRect.left &&
-                floppyRect.top < targetRect.bottom &&
-                floppyRect.bottom > targetRect.top
-            );
-
-            if (isHovering) {
-                target.classList.add('hovered');
-            } else {
-                target.classList.remove('hovered');
-            }
-        };
-
-        const handleDragEnd = (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            floppy.classList.remove('dragging');
-
-            const floppyRect = floppy.getBoundingClientRect();
-            const targetRect = target.getBoundingClientRect();
-
-            const isHovering = (
-                floppyRect.left < targetRect.right &&
-                floppyRect.right > targetRect.left &&
-                floppyRect.top < targetRect.bottom &&
-                floppyRect.bottom > targetRect.top
-            );
-
-            if (isHovering) {
-                floppy.style.opacity = '0';
-                target.innerHTML = `
-                    <div class="animate-ping text-neo-green font-['Press_Start_2P'] text-[10px] mb-4">AUTHENTICATING...</div>
-                    <div class="text-[8px] text-gray-500 font-['Press_Start_2P'] uppercase">Disk accepted. Booting Grid.</div>
+        function saveToArchive(url, type) {
+            const archive = document.getElementById('savedCaptures');
+            if (archive.querySelector('.opacity-40')) archive.innerHTML = '';
+            
+            const box = document.createElement('div');
+            box.className = 'neo-box p-2 bg-black border-4 border-black';
+            
+            if (type === 'video') {
+                box.innerHTML = `
+                    <video src="${url}" controls class="w-full h-auto grayscale hover:grayscale-0 transition"></video>
+                    <div class="text-[6px] text-[#39ff14] mt-2 font-['Press_Start_2P']">LIVE_UPLINK_${Date.now()}</div>
                 `;
-                window.initFirebaseAndShow();
             } else {
-                floppy.style.transform = `translate(0, 0)`;
-                target.classList.remove('hovered');
+                box.innerHTML = `
+                    <img src="${url}" class="w-full h-auto grayscale hover:grayscale-0 transition">
+                    <div class="text-[6px] text-[#39ff14] mt-2 font-['Press_Start_2P']">STILL_FRAME_${Date.now()}</div>
+                `;
             }
-        };
-
-        floppy.addEventListener('mousedown', handleDragStart);
-        window.addEventListener('mousemove', handleDragMove);
-        window.addEventListener('mouseup', handleDragEnd);
-
-        floppy.addEventListener('touchstart', handleDragStart, { passive: false });
-        window.addEventListener('touchmove', handleDragMove, { passive: false });
-        window.addEventListener('touchend', handleDragEnd);
+            
+            archive.prepend(box);
+        }
 
         window.onload = () => setTimeout(hideOverlay, 1000);
     </script>
