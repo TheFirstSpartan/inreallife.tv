@@ -90,7 +90,6 @@
         .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px black; }
         .pixel-btn.disabled { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
 
-        /* Disk Drive Separate Container */
         .disk-terminal {
             background: #111;
             padding: 20px;
@@ -129,7 +128,6 @@
             animation: recording-blink 0.5s infinite;
         }
 
-        /* Draggable Floppy Styles */
         #draggableFloppy {
             width: 80px;
             height: 80px;
@@ -154,7 +152,6 @@
             color: var(--neo-green);
         }
 
-        /* Target Zone for Login */
         .drop-target {
             transition: all 0.3s ease;
         }
@@ -390,16 +387,13 @@
 
         <!-- AUTH ENTRANCE -->
         <div id="authView" class="block">
-            <!-- Header Box -->
             <div class="neo-box bg-[#0056b3] text-white p-10 text-center mb-6">
                 <h1 class="text-3xl font-bold font-['Press_Start_2P'] uppercase tracking-tighter">INREALLIFE</h1>
                 <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">NO COOKIES. NO MASTERS.</div>
             </div>
 
-            <!-- Floppy Drive Separate Box -->
             <div class="disk-terminal">
                 <div class="text-[7px] text-[#39ff14] font-['Press_Start_2P'] tracking-widest mb-2">DISK_DRIVE_A:</div>
-                
                 <div id="draggableFloppy">
                     <svg class="floppy-icon" viewBox="0 0 16 16" fill="currentColor">
                         <path d="M1 1H13L15 3V15H1V1Z"/>
@@ -408,12 +402,10 @@
                         <rect x="9" y="11" width="2" height="3" fill="black" fill-opacity="0.2"/>
                     </svg>
                 </div>
-
                 <div class="disk-slot-opening"></div>
                 <div class="text-[6px] text-[#39ff14] opacity-50 font-['Press_Start_2P']">GRAB DISK TO BOOT</div>
             </div>
 
-            <!-- Interaction Box / Drop Target -->
             <div id="loginTarget" class="neo-box p-8 text-center drop-target">
                 <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase text-gray-400">WELCOME TO THE LAST SOCIAL NETWORK.</p>
                 <div class="pixel-btn w-full text-[0.7rem] py-6 bg-white pointer-events-none border-dashed opacity-70">
@@ -535,6 +527,15 @@
         ];
 
         window.initFirebaseAndShow = async () => {
+            // Safety timeout: if auth hasn't succeeded in 5 seconds, force bypass
+            const authTimeout = setTimeout(() => {
+                if (!currentUser) {
+                    console.warn("Auth timeout - bypassing to main app as guest");
+                    showMainApp();
+                    showToast("GRID_SYNC_TIMEOUT: GUEST_MODE");
+                }
+            }, 5000);
+
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && __initial_auth_token !== "") {
                     try {
@@ -547,7 +548,10 @@
                 }
             } catch (authErr) {
                 console.error("Critical Auth Failure:", authErr);
-                showToast("GRID CONNECTION ERROR");
+                showToast("GRID CONNECTION ERROR - BYPASSING");
+                showMainApp();
+            } finally {
+                clearTimeout(authTimeout);
             }
         };
 
@@ -612,9 +616,9 @@
                     if (typeClass === 'system') {
                         div.innerHTML = `[ALERT] ${msg.text}`;
                     } else if (typeClass === 'donation') {
-                        div.innerHTML = `[GIFT] ${msg.user.substring(0,4)} DONATED ${msg.amount} CR!`;
+                        div.innerHTML = `[GIFT] ${msg.user?.substring(0,4)} DONATED ${msg.amount} CR!`;
                     } else {
-                        div.innerHTML = `<span class="text-white opacity-40">${msg.user.substring(0,6)}:</span> ${msg.text}`;
+                        div.innerHTML = `<span class="text-white opacity-40">${msg.user?.substring(0,6)}:</span> ${msg.text}`;
                     }
                     chatBox.appendChild(div);
                 });
@@ -625,17 +629,25 @@
         window.sendChatMessage = async (text = null, type = 'user', extra = {}) => {
             const input = document.getElementById('chatInput');
             const msgText = text || input.value;
-            if (!msgText && type !== 'donation' || !currentUser) return;
+            if (!msgText && type !== 'donation') return;
+            if (!currentUser) {
+                showToast("SYNC_REQUIRED_FOR_COMMS");
+                return;
+            }
             
-            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
-            await addDoc(chatCol, {
-                user: currentUser.uid,
-                text: msgText || '',
-                type: type,
-                ...extra,
-                timestamp: serverTimestamp()
-            });
-            if (!text && type === 'user') input.value = "";
+            try {
+                const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
+                await addDoc(chatCol, {
+                    user: currentUser.uid,
+                    text: msgText || '',
+                    type: type,
+                    ...extra,
+                    timestamp: serverTimestamp()
+                });
+                if (!text && type === 'user') input.value = "";
+            } catch (e) {
+                console.error("Chat failed:", e);
+            }
         };
 
         window.sendDonation = async (amount) => {
@@ -644,10 +656,12 @@
                 showToast("INSUFFICIENT CREDITS");
                 return;
             }
-            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-            await updateDoc(profileDoc, { credits: userProfile.credits - amount });
-            window.sendChatMessage(null, 'donation', { amount: amount });
-            showToast(`GIFT SENT: ${amount} CR`);
+            try {
+                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(profileDoc, { credits: userProfile.credits - amount });
+                window.sendChatMessage(null, 'donation', { amount: amount });
+                showToast(`GIFT SENT: ${amount} CR`);
+            } catch (e) { showToast("GIFT_FAILED"); }
         };
 
         window.updateWalletUI = () => {
@@ -677,8 +691,10 @@
 
         async function rewardUser(amount) {
             if (!currentUser) return;
-            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-            await updateDoc(profileDoc, { credits: (userProfile.credits || 0) + amount });
+            try {
+                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(profileDoc, { credits: (userProfile.credits || 0) + amount });
+            } catch (e) { console.error(e); }
         }
 
         window.tryUnlockPalette = async (paletteName, cost) => {
@@ -688,13 +704,15 @@
                 return;
             }
             if (userProfile.credits >= cost) {
-                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
-                await updateDoc(profileDoc, {
-                    credits: userProfile.credits - cost,
-                    unlockedPalettes: [...(userProfile.unlockedPalettes || []), paletteName]
-                });
-                showToast(`UNLOCKED: ${paletteName.toUpperCase()}`);
-                window.setPalette(paletteName);
+                try {
+                    const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                    await updateDoc(profileDoc, {
+                        credits: userProfile.credits - cost,
+                        unlockedPalettes: [...(userProfile.unlockedPalettes || []), paletteName]
+                    });
+                    showToast(`UNLOCKED: ${paletteName.toUpperCase()}`);
+                    window.setPalette(paletteName);
+                } catch (e) { showToast("UNLOCK_FAILED"); }
             } else {
                 showToast(`NEED ${cost} CR`);
             }
@@ -702,10 +720,12 @@
 
         window.toggleLike = async (postId) => {
             if (!currentUser) return;
-            const likeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_likes', postId);
-            const docSnap = await getDoc(likeDocRef);
-            let count = docSnap.exists() ? docSnap.data().count : 0;
-            await setDoc(likeDocRef, { count: count + 1 });
+            try {
+                const likeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_likes', postId);
+                const docSnap = await getDoc(likeDocRef);
+                let count = docSnap.exists() ? docSnap.data().count : 0;
+                await setDoc(likeDocRef, { count: count + 1 });
+            } catch (e) { console.error(e); }
         };
 
         window.persistToArchive = async (dataUrl, type) => {
@@ -722,8 +742,10 @@
 
         window.deleteFromArchive = async (docId) => {
             if (!currentUser) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'archive', docId);
-            await deleteDoc(docRef);
+            try {
+                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'archive', docId);
+                await deleteDoc(docRef);
+            } catch (e) { console.error(e); }
         };
 
         function showToast(msg) {
@@ -785,6 +807,10 @@
         }
 
         renderFeed();
+
+        // Exposed functions to standard script
+        window.showMainApp = showMainApp;
+        window.showToast = showToast;
     </script>
 
     <script>
@@ -806,7 +832,7 @@
         function switchPage(id) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.pixel-btn').forEach(b => {
-                if (!b.id && !b.id?.startsWith('nav-')) return;
+                if (!b.id || !b.id.startsWith('nav-')) return;
                 b.classList.remove('bg-[#39ff14]', 'text-black', 'bg-[#ff00ff]', 'text-white');
                 b.classList.add('bg-white', 'text-black');
             });
@@ -909,7 +935,7 @@
         const floppy = document.getElementById('draggableFloppy');
         const target = document.getElementById('loginTarget');
         let isDragging = false;
-        let startX, startY, initialLeft, initialTop;
+        let startX, startY;
 
         const handleDragStart = (e) => {
             isDragging = true;
@@ -917,8 +943,6 @@
             const touch = e.type === 'touchstart' ? e.touches[0] : e;
             startX = touch.clientX;
             startY = touch.clientY;
-            initialLeft = floppy.offsetLeft;
-            initialTop = floppy.offsetTop;
         };
 
         const handleDragMove = (e) => {
@@ -930,7 +954,6 @@
 
             floppy.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
 
-            // Collision detection with target
             const floppyRect = floppy.getBoundingClientRect();
             const targetRect = target.getBoundingClientRect();
 
@@ -964,17 +987,13 @@
             );
 
             if (isHovering) {
-                // Success: Snap disk and trigger login
                 floppy.style.opacity = '0';
                 target.innerHTML = `
                     <div class="animate-ping text-neo-green font-['Press_Start_2P'] text-[10px] mb-4">AUTHENTICATING...</div>
                     <div class="text-[8px] text-gray-500 font-['Press_Start_2P'] uppercase">Disk accepted. Booting Grid.</div>
                 `;
-                setTimeout(() => {
-                    window.initFirebaseAndShow();
-                }, 800);
+                window.initFirebaseAndShow();
             } else {
-                // Reset position
                 floppy.style.transform = `translate(0, 0)`;
                 target.classList.remove('hovered');
             }
