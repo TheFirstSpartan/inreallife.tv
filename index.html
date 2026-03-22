@@ -1,591 +1,310 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INREALLIFE - Unified Grid</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --border-thick: 4px;
-            --shadow-offset: 6px;
-            --neo-blue: #0056b3;
-            --neo-yellow: #facc15;
-            --neo-red: #ef4444;
-            --neo-green: #39ff14;
-            --neo-magenta: #ff00ff;
-            --neo-cyan: #00ffff;
-        }
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, arrayUnion } from 'firebase/firestore';
 
-        @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
+// Firebase configuration using environment variables
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'irl-unified-grid';
 
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState({ balance: 0, archive: [], lastActive: Date.now() });
+  const [bootStatus, setBootStatus] = useState(0);
+  const [isBooting, setIsBooting] = useState(false);
+  const [currentPage, setCurrentPage] = useState('auth');
+  const [isLive, setIsLive] = useState(false);
+  const [streamActive, setStreamActive] = useState(false);
+  const [notification, setNotification] = useState('');
+  
+  const videoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const chunksRef = useRef([]);
 
-        body {
-            background-color: #e5e7eb;
-            background-image: radial-gradient(#000 1px, transparent 1px);
-            background-size: 16px 16px;
-            font-family: 'Courier Prime', monospace;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-            color: black;
-            padding: 15px;
-            overflow-x: hidden;
-        }
+  // --- (1) AUTHENTICATION ---
+  useEffect(() => {
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (u) setUser(u);
+    });
+    return () => unsubscribe();
+  }, []);
 
-        #appContainer { width: 100%; max-width: 440px; position: relative; }
+  // --- (2) DATA PERSISTENCE ---
+  useEffect(() => {
+    if (!user) return;
+    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setProfile(docSnap.data());
+      } else {
+        setDoc(userDocRef, { 
+          balance: 0, 
+          archive: [], 
+          uid: user.uid,
+          createdAt: Date.now() 
+        });
+      }
+    }, (error) => console.error("Firestore Error:", error));
+    return () => unsubscribe();
+  }, [user]);
 
-        .neo-box {
-            border: var(--border-thick) solid black;
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0px 0px black;
-            background-color: white;
-            width: 100%;
-            position: relative;
-            margin-bottom: 20px;
-        }
+  // --- LOGIC FUNCTIONS ---
+  const handleBoot = () => {
+    setIsBooting(true);
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress >= 100) {
+        setBootStatus(100);
+        clearInterval(interval);
+        setTimeout(() => {
+          setCurrentPage('discover');
+          setIsBooting(false);
+        }, 800);
+      } else {
+        setBootStatus(progress);
+      }
+    }, 100);
+  };
 
-        .neo-header {
-            border-bottom: var(--border-thick) solid black;
-            padding: 10px 12px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.65rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            text-transform: uppercase;
-        }
+  const showNotify = (msg) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(''), 2000);
+  };
 
-        .pixel-btn {
-            border: 4px solid black;
-            box-shadow: 4px 4px 0px black;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.55rem;
-            padding: 12px 4px;
-            text-align: center;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.05s;
-            user-select: none;
-            position: relative;
+  const syncLens = async (e) => {
+    if(e) e.preventDefault(); 
+    try {
+      // High-performance constraints for mobile
+      const constraints = {
+        video: { 
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 30 }
+        }, 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true
         }
-        .pixel-btn:active { 
-            transform: translate(2px, 2px); 
-            box-shadow: 1px 1px 0px black; 
-            filter: brightness(1.5) saturate(1.5);
-        }
-        .pixel-btn.disabled { opacity: 0.4; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
+      };
 
-        /* Color Variants */
-        .btn-sync { background-color: var(--neo-blue); color: white; }
-        .btn-record { background-color: var(--neo-red); color: white; }
-        .btn-snap { background-color: var(--neo-yellow); color: black; }
-        .btn-donate { background-color: var(--neo-magenta); color: white; }
-        .btn-live { background-color: var(--neo-green); color: black; }
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
 
-        /* Disk UI */
-        .disk-drive {
-            background: #111;
-            border: 4px solid black;
-            padding: 20px;
-            text-align: center;
-            color: var(--neo-green);
-            font-family: 'Press Start 2P', cursive;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            border: 2px solid #333;
-            background: #000;
-            margin: 20px 0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: var(--neo-green);
-            width: 0%;
-            transition: width 0.1s linear;
-        }
-
-        /* Feed */
-        .feed-container {
-            height: 600px;
-            overflow-y: scroll;
-            scroll-snap-type: y mandatory;
-            scrollbar-width: none;
-            border: 4px solid black;
-            background: black;
-        }
-        .feed-container::-webkit-scrollbar { display: none; }
+      if (videoRef.current) {
+        // MOBILE HIJACK PREVENTION:
+        // 1. We create a video-only preview stream to stop iOS from triggering a "Live Call" overlay
+        const previewStream = new MediaStream([stream.getVideoTracks()[0]]);
         
-        .feed-item {
-            height: 100%;
-            width: 100%;
-            scroll-snap-align: start;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-bottom: 2px solid #222;
+        videoRef.current.srcObject = previewStream;
+        
+        // 2. Strict inline attributes to keep it inside the DIV
+        videoRef.current.setAttribute('playsinline', '');
+        videoRef.current.setAttribute('webkit-playsinline', '');
+        videoRef.current.muted = true; 
+        videoRef.current.defaultMuted = true;
+        
+        // 3. Play immediately
+        await videoRef.current.play();
+        
+        setStreamActive(true);
+        showNotify("LENS_SYNCED");
+      }
+    } catch (err) {
+      console.error(err);
+      showNotify("SIGNAL_BLOCKED");
+    }
+  };
+
+  const takeSnapshot = async () => {
+    if (!streamActive || !videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.filter = 'grayscale(100%) contrast(1.2)';
+    ctx.drawImage(videoRef.current, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    
+    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+    await updateDoc(userDocRef, {
+      archive: arrayUnion({ id: Date.now(), type: 'image', url: dataUrl })
+    });
+    showNotify("FRAME_ARCHIVED");
+  };
+
+  const startRec = () => {
+    if (!streamActive || !streamRef.current) return;
+    try {
+      chunksRef.current = [];
+      // Use the full stream (including audio) for recording only
+      mediaRecorderRef.current = new MediaRecorder(streamRef.current);
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mediaRecorderRef.current.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = async () => {
+          const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+          await updateDoc(userDocRef, {
+            archive: arrayUnion({ id: Date.now(), type: 'video', url: reader.result })
+          });
+          showNotify("CLIP_ARCHIVED");
+        };
+      };
+      mediaRecorderRef.current.start();
+      showNotify("REC_START");
+      setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
         }
+      }, 5000);
+    } catch (err) {
+      showNotify("REC_FAILED");
+    }
+  };
 
-        .feed-ui {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 80px;
-            pointer-events: none;
-            color: white;
-            text-shadow: 2px 2px 0px black;
-        }
+  const mineCR = async () => {
+    if (!user) return;
+    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+    await updateDoc(userDocRef, { balance: profile.balance + 0.5 });
+    showNotify("+0.50 CR MINED");
+  };
 
-        .marquee-container {
-            width: 100%;
-            overflow: hidden;
-            white-space: nowrap;
-            font-size: 8px;
-            margin-top: 4px;
-        }
+  // --- STYLES ---
+  const neoBox = "border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-4 overflow-hidden";
+  const pixelBtn = "border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-['Press_Start_2P'] text-[9px] p-2 text-center cursor-pointer uppercase select-none flex items-center justify-center";
 
-        .marquee-text {
-            display: inline-block;
-            padding-left: 100%;
-            animation: marquee 10s linear infinite;
-        }
+  return (
+    <div className="fixed inset-0 bg-gray-300 p-3 font-mono flex flex-col items-center overflow-hidden select-none">
+      
+      {/* HEADER */}
+      <div className="w-full max-w-[440px] bg-black text-white p-2 mb-2 text-[7px] font-['Press_Start_2P'] flex justify-between items-center z-50 shrink-0">
+        <span className="opacity-50">GRID_UID:</span>
+        <span className="truncate ml-2">{user ? user.uid : "CONNECTING..."}</span>
+      </div>
 
-        .social-sidebar {
-            position: absolute;
-            right: 15px;
-            bottom: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-            z-index: 30;
-        }
+      <div className="w-full max-w-[440px] flex-1 flex flex-col relative overflow-hidden">
+        
+        {notification && (
+          <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] bg-yellow-400 border-4 border-black p-2 font-['Press_Start_2P'] text-[8px] shadow-[4px_4px_0px_black] w-[80%] text-center">
+            {notification}
+          </div>
+        )}
 
-        .social-btn {
-            background: none;
-            border: none;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-        }
-        .social-btn span { font-family: 'Press Start 2P'; font-size: 6px; margin-top: 5px; }
+        {currentPage === 'auth' ? (
+          <div className="space-y-4 pt-10">
+            <div className={`${neoBox} bg-[#0056b3] text-white p-8 text-center`}>
+              <h1 className="text-xl font-['Press_Start_2P'] uppercase">IRL_GRID</h1>
+            </div>
+            <div className={`${neoBox} bg-zinc-900 p-6 text-[#39ff14] font-['Press_Start_2P']`}>
+              <div className="w-full h-3 bg-black border-2 border-zinc-700 relative overflow-hidden mb-4">
+                <div className="h-full bg-[#39ff14] transition-all duration-100" style={{ width: `${bootStatus}%` }} />
+              </div>
+              <div className="text-[8px] text-center">{isBooting ? 'UPLINKING...' : 'READY_FOR_BOOT'}</div>
+            </div>
+            <button onClick={handleBoot} disabled={isBooting} className={`${pixelBtn} w-full py-5 text-xs`}>
+              {isBooting ? 'BOOTING...' : 'INITIATE_UPLINK'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="grid grid-cols-3 gap-2 mb-2 shrink-0">
+              <button onClick={() => setCurrentPage('discover')} className={`${pixelBtn} ${currentPage === 'discover' ? 'bg-[#39ff14]' : ''}`}>FEED</button>
+              <button onClick={() => setCurrentPage('channel')} className={`${pixelBtn} ${currentPage === 'channel' ? 'bg-[#39ff14]' : ''}`}>UPLINK</button>
+              <button onClick={() => setCurrentPage('profile')} className={`${pixelBtn} ${currentPage === 'profile' ? 'bg-[#39ff14]' : ''}`}>ARCHIVE</button>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-4 shrink-0">
+               <button onClick={() => setCurrentPage('ads')} className={`${pixelBtn} ${currentPage === 'ads' ? 'bg-[#ff00ff] text-white' : ''}`}>WALLET</button>
+               <button onClick={() => window.location.reload()} className={pixelBtn}>LOGOUT</button>
+            </div>
 
-        .donate-btn-sidebar {
-            background: var(--neo-magenta);
-            border: 2px solid black;
-            padding: 8px;
-            color: white;
-            font-family: 'Press Start 2P';
-            font-size: 6px;
-            margin-top: 5px;
-            box-shadow: 2px 2px 0px black;
-        }
+            <div className="flex-1 overflow-hidden">
+                {currentPage === 'discover' && (
+                <div className={`${neoBox} bg-black h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide`}>
+                    <div className="snap-start h-full flex items-center justify-center flex-col p-6 text-center">
+                      <div className="text-[#39ff14] font-['Press_Start_2P'] text-xs mb-4 animate-pulse">BROADCAST_ACTIVE</div>
+                    </div>
+                    {profile.archive.slice(-5).reverse().map((item) => (
+                    <div key={item.id} className="snap-start h-full relative group bg-zinc-900 border-b-2 border-zinc-800">
+                        {item.type === 'video' ? 
+                        <video src={item.url} autoPlay muted loop playsInline className="w-full h-full object-cover grayscale opacity-60" /> :
+                        <img src={item.url} className="w-full h-full object-cover grayscale opacity-60" />
+                        }
+                    </div>
+                    ))}
+                </div>
+                )}
 
-        /* Camera */
-        .camera-container {
-            aspect-ratio: 9/16;
-            background: #000;
-            border: 4px solid black;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+                {currentPage === 'channel' && (
+                <div className={`${neoBox} h-full flex flex-col`}>
+                    <div className="p-3 flex-1 flex flex-col min-h-0">
+                    <div className="flex-1 bg-black border-4 border-black relative overflow-hidden mb-3 flex items-center justify-center">
+                        <video 
+                            ref={videoRef} 
+                            autoPlay 
+                            playsInline 
+                            muted 
+                            controls={false}
+                            className={`w-full h-full object-cover grayscale pointer-events-none ${!streamActive ? 'hidden' : ''}`} 
+                        />
+                        {!streamActive && <div className="text-[#39ff14] font-['Press_Start_2P'] text-[7px] animate-pulse text-center">SIGNAL_OFF</div>}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-2 shrink-0">
+                        <button onClick={syncLens} className={`${pixelBtn} bg-blue-600 text-white`}>SYNC_LENS</button>
+                        <button onClick={() => setIsLive(!isLive)} className={`${pixelBtn} ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-500'}`}>{isLive ? 'END_LIVE' : 'GO_LIVE'}</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 shrink-0">
+                        <button onClick={startRec} className={`${pixelBtn} bg-red-500 text-white`}>REC</button>
+                        <button onClick={takeSnapshot} className={`${pixelBtn} bg-yellow-400`}>SNAP</button>
+                        <button onClick={mineCR} className={`${pixelBtn} bg-fuchsia-500 text-white`}>MINE_CR</button>
+                    </div>
+                    </div>
+                </div>
+                )}
 
-        .status-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-family: 'Press Start 2P';
-            font-size: 8px;
-            z-index: 20;
-            background: black;
-            padding: 4px 8px;
-            border: 1px solid currentColor;
-        }
+                {currentPage === 'ads' && (
+                <div className={`${neoBox} h-full flex flex-col items-center justify-center text-center p-6`}>
+                    <div className="text-2xl font-['Press_Start_2P'] mb-4">{profile.balance.toFixed(2)} CR</div>
+                </div>
+                )}
 
-        .badge-live { color: #39ff14; border-color: #39ff14; animation: blink 1.5s infinite; }
-        .badge-rec { color: #ef4444; border-color: #ef4444; animation: blink 0.8s infinite; }
-
-        #loadingOverlay {
-            display: flex;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,1); color: #39ff14;
-            z-index: 5000; justify-content: center; align-items: center;
-            font-family: 'Press Start 2P', cursive; text-align: center;
-            transition: opacity 0.5s;
-        }
-
-        .scanline-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 2px 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        /* Live Indicator for discover feed */
-        .live-tag {
-            background: red;
-            color: white;
-            padding: 2px 4px;
-            font-size: 6px;
-            margin-bottom: 4px;
-            display: inline-block;
-        }
-    </style>
-</head>
-<body>
-
-    <div id="loadingOverlay">
-        <div>
-            <div class="animate-pulse mb-4 text-sm">BOOTING NEOGEO_OS...</div>
-            <button onclick="hideOverlay()" class="pixel-btn bg-white text-black text-[8px] mx-auto px-4 py-2 block">SKIP BIOS</button>
-        </div>
+                {currentPage === 'profile' && (
+                <div className={`${neoBox} h-full flex flex-col`}>
+                    <div className="p-3 grid grid-cols-1 gap-4 overflow-y-auto flex-1">
+                    {profile.archive.slice().reverse().map((item) => (
+                        <div key={item.id} className="border-4 border-black p-1 bg-black shrink-0">
+                            {item.type === 'video' ? 
+                            <video src={item.url} controls playsInline className="w-full grayscale" /> :
+                            <img src={item.url} className="w-full grayscale" />
+                            }
+                        </div>
+                    ))}
+                    </div>
+                </div>
+                )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
 
-    <div id="appContainer">
-        <!-- NAVIGATION -->
-        <div id="mainNav" class="hidden">
-            <div class="grid grid-cols-2 gap-3 pt-4 mb-3">
-                <div id="nav-profile" class="pixel-btn bg-white" onclick="switchPage('profile')">MY ARCHIVE</div>
-                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">LIVE UPLINK</div>
-            </div>
-            <div class="grid grid-cols-3 gap-2 mb-6">
-                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
-                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
-                <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
-            </div>
-        </div>
 
-        <!-- AUTH ENTRANCE -->
-        <div id="authView" class="block space-y-4">
-            <div class="neo-box bg-[#0056b3] text-white p-8 text-center border-black">
-                <h1 class="text-2xl font-bold font-['Press_Start_2P'] uppercase">INREALLIFE</h1>
-                <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">NO COOKIES. NO MASTERS.</div>
-            </div>
-
-            <div class="neo-box disk-drive shadow-[6px_6px_0px_black]">
-                <div class="text-[8px] mb-4 opacity-60">DISK_DRIVE_A:</div>
-                <div id="diskStatus">
-                    <div class="progress-bar">
-                        <div id="bootProgress" class="progress-fill"></div>
-                    </div>
-                    <div id="diskActionText" class="text-[8px]">READY TO BOOT</div>
-                </div>
-            </div>
-
-            <div id="loginActionBox" class="neo-box p-6 text-center border-black">
-                <button id="loginBtn" class="pixel-btn w-full text-[0.7rem] py-6 bg-white border-dashed border-4" onclick="handleBoot()">
-                    INSERT DISK (START)
-                </button>
-            </div>
-        </div>
-
-        <!-- MAIN APP -->
-        <div id="mainView" class="hidden">
-            <div id="page-discover" class="page-content">
-                <div class="feed-container" id="discoverFeed"></div>
-            </div>
-
-            <div id="page-channel" class="page-content hidden">
-                <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]">UPLINK_TERMINAL</div>
-                    <div class="p-4">
-                        <div class="camera-container mb-4">
-                            <div id="liveBadge" class="status-badge badge-live hidden">LIVE</div>
-                            <div id="recIndicator" class="status-badge badge-rec hidden">REC 5S</div>
-                            <video id="videoElement" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
-                            <div id="cameraPlaceholder" class="font-['Press_Start_2P'] text-[8px] text-[#39ff14] text-center p-4">
-                                [ SIGNAL_LOST ]<br><br>SYNC LENS TO BROADCAST
-                            </div>
-                            <div class="scanline-overlay"></div>
-                        </div>
-
-                        <!-- CONSOLIDATED COMMAND BOX -->
-                        <div class="neo-box bg-black p-3 space-y-3 shadow-none border-2">
-                            <div class="grid grid-cols-2 gap-3">
-                                <button id="btnInitCam" onclick="initCamera()" class="pixel-btn btn-sync">SYNC LENS</button>
-                                <button id="btnGoLive" onclick="toggleLive()" class="pixel-btn btn-live disabled">GO LIVE</button>
-                            </div>
-                            <div class="grid grid-cols-3 gap-2">
-                                <button id="btnRecord" onclick="startRecording()" class="pixel-btn btn-record disabled">REC</button>
-                                <button id="btnSnap" onclick="takeSnapshot()" class="pixel-btn btn-snap disabled">SNAP</button>
-                                <button id="btnDonateSelf" onclick="donate(100)" class="pixel-btn btn-donate">DONATE</button>
-                            </div>
-                            <div id="recordStatus" class="text-[6px] text-[#39ff14] text-center font-['Press_Start_2P'] uppercase">COMMAND_READY_</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="page-ads" class="page-content hidden">
-                <div class="neo-box">
-                    <div class="neo-header bg-[#ff00ff] text-white">WALLET_STATUS</div>
-                    <div class="p-10 text-center font-['Press_Start_2P']">
-                        <div id="balanceDisplay" class="text-[14px] mb-4">0.00 CR</div>
-                        <div class="text-[8px] uppercase">GRID_CREDITS_FOUND</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="page-profile" class="page-content hidden">
-                <div class="neo-box">
-                    <div class="neo-header bg-[#facc15]">GRID_ARCHIVE</div>
-                    <div id="savedCaptures" class="p-4 grid grid-cols-1 gap-4 bg-gray-200 min-h-[200px]">
-                        <div class="text-[8px] opacity-40 text-center py-10 uppercase">No signal history</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let balance = 0;
-        let userId = "ANON";
-        let streamActive = false;
-        let isLive = false;
-        let mediaRecorder;
-        let recordedChunks = [];
-
-        const feedData = [
-            { id: 1, user: "Kyo_Esaka", likes: 120, music: "TEARS 2002", color: "#ef4444", text: "The flames are back.", isLive: false },
-            { id: 2, user: "Iori_Yagami", likes: 666, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood.", isLive: false }
-        ];
-
-        function hideOverlay() {
-            document.getElementById('loadingOverlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);
-        }
-
-        function handleBoot() {
-            const btn = document.getElementById('loginBtn');
-            const progress = document.getElementById('bootProgress');
-            const text = document.getElementById('diskActionText');
-            const actionBox = document.getElementById('loginActionBox');
-
-            btn.classList.add('disabled');
-            text.innerText = "BOOTING...";
-            
-            let width = 0;
-            const interval = setInterval(() => {
-                width += Math.random() * 20;
-                if (width >= 100) {
-                    width = 100;
-                    clearInterval(interval);
-                    userId = 'GRID_' + Math.random().toString(36).substr(2, 6).toUpperCase();
-                    actionBox.innerHTML = `<div class="font-['Press_Start_2P'] text-[8px] text-green-600">DISK ACCEPTED. HI ${userId}</div>`;
-                    setTimeout(showMainApp, 1000);
-                }
-                progress.style.width = width + '%';
-            }, 100);
-        }
-
-        function showMainApp() {
-            document.getElementById('authView').classList.add('hidden');
-            document.getElementById('mainView').classList.remove('hidden');
-            document.getElementById('mainNav').classList.remove('hidden');
-            switchPage('discover');
-        }
-
-        function switchPage(id) {
-            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.pixel-btn').forEach(b => {
-                if (!b.id?.startsWith('nav-')) return;
-                b.classList.remove('bg-[#39ff14]', 'bg-[#ff00ff]', 'text-white', 'text-black');
-                b.classList.add('bg-white', 'text-black');
-            });
-
-            document.getElementById('page-' + id).classList.remove('hidden');
-            const navBtn = document.getElementById('nav-' + id);
-            if(navBtn) {
-                navBtn.classList.remove('bg-white');
-                navBtn.classList.add(id === 'ads' ? 'bg-[#ff00ff]' : 'bg-[#39ff14]');
-                if (id === 'ads') navBtn.classList.add('text-white');
-            }
-            if (id === 'discover') renderFeed();
-            if (id === 'ads') updateBalance();
-        }
-
-        function updateBalance() {
-            const display = document.getElementById('balanceDisplay');
-            if (display) display.innerText = balance.toFixed(2) + " CR";
-        }
-
-        function donate(amount) {
-            balance += amount;
-            updateBalance();
-            const status = document.getElementById('recordStatus');
-            status.innerText = `+${amount} CR ADDED TO GRID`;
-            setTimeout(() => { status.innerText = isLive ? "UPLINK_STABLE" : "COMMAND_READY_"; }, 2000);
-        }
-
-        function renderFeed() {
-            const feed = document.getElementById('discoverFeed');
-            feed.innerHTML = feedData.map(item => `
-                <div class="feed-item">
-                    <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
-                        <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
-                    </div>
-                    <div class="social-sidebar">
-                        <button class="social-btn" onclick="donate(10)">
-                            <div class="donate-btn-sidebar">DONATE 10</div>
-                        </button>
-                        <button class="social-btn" onclick="donate(50)">
-                            <div class="donate-btn-sidebar" style="background:var(--neo-yellow);color:black">TIP 50</div>
-                        </button>
-                    </div>
-                    <div class="feed-ui">
-                        ${item.isLive ? '<div class="live-tag font-["Press_Start_2P"]">LIVE BROADCAST</div>' : ''}
-                        <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
-                        <div class="text-[8px] mb-4">${item.text}</div>
-                        <div class="marquee-container">
-                            <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                const video = document.getElementById('videoElement');
-                video.srcObject = stream;
-                video.classList.remove('hidden');
-                document.getElementById('cameraPlaceholder').classList.add('hidden');
-                document.getElementById('btnRecord').classList.remove('disabled');
-                document.getElementById('btnSnap').classList.remove('disabled');
-                document.getElementById('btnGoLive').classList.remove('disabled');
-                streamActive = true;
-                
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
-                mediaRecorder.onstop = saveVideo;
-                
-                document.getElementById('btnInitCam').innerText = "LENS_SYNCED";
-                document.getElementById('btnInitCam').classList.add('brightness-150');
-            } catch (err) { alert("SIGNAL BLOCKED. CAMERA REQ."); }
-        }
-
-        function toggleLive() {
-            if (!streamActive) return;
-            isLive = !isLive;
-            const btn = document.getElementById('btnGoLive');
-            const badge = document.getElementById('liveBadge');
-            const status = document.getElementById('recordStatus');
-
-            if (isLive) {
-                btn.innerText = "END LIVE";
-                btn.style.backgroundColor = "white";
-                btn.style.color = "red";
-                badge.classList.remove('hidden');
-                status.innerText = "UPLINKING TO DISCOVERY GRID...";
-                
-                // Add current user to feed
-                feedData.unshift({
-                    id: Date.now(),
-                    user: userId,
-                    likes: 0,
-                    music: "LIVE BROADCAST",
-                    color: "#39ff14",
-                    text: "Broadcasting live from the terminal.",
-                    isLive: true
-                });
-            } else {
-                btn.innerText = "GO LIVE";
-                btn.style.backgroundColor = "var(--neo-green)";
-                btn.style.color = "black";
-                badge.classList.add('hidden');
-                status.innerText = "UPLINK TERMINATED";
-                
-                // Remove user from feed
-                const index = feedData.findIndex(f => f.user === userId);
-                if (index > -1) feedData.splice(index, 1);
-            }
-        }
-
-        function startRecording() {
-            if (!streamActive) return;
-            recordedChunks = [];
-            mediaRecorder.start();
-            document.getElementById('recIndicator').classList.remove('hidden');
-            document.getElementById('btnRecord').classList.add('disabled');
-            document.getElementById('recordStatus').innerText = "BUFFERING SIGNAL...";
-            
-            setTimeout(() => {
-                mediaRecorder.stop();
-                document.getElementById('recIndicator').classList.add('hidden');
-                document.getElementById('btnRecord').classList.remove('disabled');
-                document.getElementById('recordStatus').innerText = "SIGNAL CAPTURED";
-            }, 5000);
-        }
-
-        function takeSnapshot() {
-            if (!streamActive) return;
-            const video = document.getElementById('videoElement');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            const url = canvas.toDataURL('image/png');
-            saveToArchive(url, 'image');
-            
-            document.getElementById('recordStatus').innerText = "SNAPSHOT SAVED";
-            setTimeout(() => { document.getElementById('recordStatus').innerText = isLive ? "UPLINK_STABLE" : "COMMAND_READY_"; }, 2000);
-        }
-
-        function saveVideo() {
-            const blob = new Blob(recordedChunks, { type: 'video/webm' });
-            const url = URL.createObjectURL(blob);
-            saveToArchive(url, 'video');
-        }
-
-        function saveToArchive(url, type) {
-            const archive = document.getElementById('savedCaptures');
-            if (archive.querySelector('.opacity-40')) archive.innerHTML = '';
-            
-            const box = document.createElement('div');
-            box.className = 'neo-box p-2 bg-black border-4 border-black';
-            
-            if (type === 'video') {
-                box.innerHTML = `
-                    <video src="${url}" controls class="w-full h-auto grayscale hover:grayscale-0 transition"></video>
-                    <div class="text-[6px] text-[#39ff14] mt-2 font-['Press_Start_2P']">LIVE_UPLINK_${Date.now()}</div>
-                `;
-            } else {
-                box.innerHTML = `
-                    <img src="${url}" class="w-full h-auto grayscale hover:grayscale-0 transition">
-                    <div class="text-[6px] text-[#39ff14] mt-2 font-['Press_Start_2P']">STILL_FRAME_${Date.now()}</div>
-                `;
-            }
-            
-            archive.prepend(box);
-        }
-
-        window.onload = () => setTimeout(hideOverlay, 1000);
-    </script>
-</body>
-</html>
