@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>INREALLIFE - Unified Grid</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -28,6 +28,11 @@
             50% { opacity: 0; }
         }
 
+        @keyframes disk-pulse {
+            0%, 100% { filter: drop-shadow(0 0 2px var(--neo-green)); }
+            50% { filter: drop-shadow(0 0 8px var(--neo-green)); }
+        }
+
         body {
             background-color: #e5e7eb;
             background-image: radial-gradient(#000 1px, transparent 1px);
@@ -40,6 +45,7 @@
             color: black;
             padding: 15px;
             overflow-x: hidden;
+            touch-action: manipulation;
         }
 
         #appContainer { width: 100%; max-width: 440px; position: relative; }
@@ -75,11 +81,89 @@
             text-transform: uppercase;
             transition: all 0.1s;
             user-select: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .pixel-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px black; }
         .pixel-btn.disabled { opacity: 0.5; cursor: not-allowed !important; pointer-events: none; filter: grayscale(1); }
 
-        /* Camera & Video Styles */
+        /* Disk Drive Separate Container */
+        .disk-terminal {
+            background: #111;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            border: 4px solid black;
+            box-shadow: 6px 6px 0px black;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 100;
+        }
+
+        .disk-slot-opening {
+            background: #000;
+            width: 120px;
+            height: 12px;
+            border: 2px solid #333;
+            border-radius: 4px;
+            box-shadow: inset 0 0 10px rgba(0,255,0,0.2);
+            position: relative;
+        }
+
+        .disk-slot-opening::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 4px;
+            background: var(--neo-green);
+            border-radius: 50%;
+            animation: recording-blink 0.5s infinite;
+        }
+
+        /* Draggable Floppy Styles */
+        #draggableFloppy {
+            width: 80px;
+            height: 80px;
+            cursor: grab;
+            touch-action: none;
+            user-select: none;
+            position: relative;
+            z-index: 1001;
+            transition: transform 0.1s ease-out;
+        }
+        #draggableFloppy:active { cursor: grabbing; }
+        #draggableFloppy.dragging {
+            filter: drop-shadow(0 0 15px var(--neo-green));
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+
+        .floppy-icon {
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            color: var(--neo-green);
+        }
+
+        /* Target Zone for Login */
+        .drop-target {
+            transition: all 0.3s ease;
+        }
+        .drop-target.hovered {
+            background-color: #dcfce7 !important;
+            border-color: var(--neo-green) !important;
+            box-shadow: 0 0 20px var(--neo-green);
+        }
+
         .camera-container {
             position: relative;
             background: black;
@@ -98,6 +182,10 @@
             object-fit: cover;
             filter: contrast(1.1) brightness(1.1) sepia(0.2);
         }
+        
+        .palette-orochi { filter: contrast(1.5) brightness(0.8) hue-rotate(280deg) !important; }
+        .palette-gold { filter: contrast(1.2) sepia(1) saturate(5) !important; }
+        .palette-cyber { filter: invert(1) hue-rotate(180deg) !important; }
 
         .rec-indicator {
             position: absolute;
@@ -122,7 +210,6 @@
             z-index: 10;
         }
 
-        /* Discover Feed UI */
         .feed-container {
             height: 600px;
             overflow-y: scroll;
@@ -174,6 +261,7 @@
             flex-direction: column;
             align-items: center;
             cursor: pointer;
+            transition: color 0.2s;
         }
 
         .social-btn span {
@@ -205,15 +293,79 @@
             font-family: 'Press Start 2P', cursive; text-align: center;
         }
 
-        #chatBox { height: 120px; overflow-y: auto; scrollbar-width: none; background: #000; border: 4px solid black; padding: 10px; color: #39ff14; font-family: 'Courier Prime'; }
+        #chatBox { 
+            height: 160px; 
+            overflow-y: auto; 
+            scrollbar-width: none; 
+            background: #000; 
+            border: 4px solid black; 
+            padding: 10px; 
+            color: #39ff14; 
+            font-family: 'Courier Prime'; 
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        #chatBox::-webkit-scrollbar { display: none; }
+        
+        .chat-msg {
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-left: 2px solid #39ff14;
+            padding-left: 8px;
+            margin-bottom: 4px;
+            animation: slideIn 0.2s ease-out;
+        }
+        .chat-msg.system { border-left-color: #ef4444; color: #ef4444; }
+        .chat-msg.donation { border-left-color: #facc15; color: #facc15; background: rgba(250, 204, 21, 0.1); }
+
+        @keyframes slideIn {
+            from { transform: translateX(-10px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .error-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ef4444;
+            color: white;
+            padding: 10px 20px;
+            border: 2px solid black;
+            font-family: 'Press Start 2P';
+            font-size: 8px;
+            z-index: 9999;
+            box-shadow: 4px 4px 0px black;
+        }
+
+        #adSplash {
+            position: fixed;
+            top:0; left:0; width:100%; height:100%;
+            background: black; z-index: 10000;
+            display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: white; font-family: 'Press Start 2P';
+        }
     </style>
 </head>
 <body>
 
+    <div id="adSplash">
+        <div class="text-neo-red text-xl mb-4">CHALLENGER APPROACHING!</div>
+        <div class="neo-box w-64 bg-white text-black p-4 text-center">
+            <div class="text-[10px] mb-4">SPONSORED BY:</div>
+            <div class="text-lg font-bold">NEO-DRINK</div>
+            <div class="text-[8px] mt-2">GIVE YOUR LIFE A REBOOT.</div>
+        </div>
+        <div id="adTimer" class="mt-8 text-[10px]">REWARD IN 5...</div>
+    </div>
+
     <div id="loadingOverlay">
         <div>
             <div class="animate-pulse mb-4 text-sm">BOOTING NEOGEO_OS...</div>
-            <div class="text-[8px] opacity-50 mb-6">SIGNAL STRENGTH: 98%</div>
+            <div class="text-[8px] opacity-50 mb-6">CONNECTING TO GRID_NETWORK...</div>
             <button onclick="hideOverlay()" class="pixel-btn bg-white text-black text-[8px] mx-auto px-4 py-2 block">SKIP BIOS</button>
         </div>
     </div>
@@ -221,32 +373,57 @@
     <div id="appContainer">
         <!-- NAVIGATION -->
         <div id="mainNav" class="hidden">
-            <div class="grid grid-cols-2 gap-3 pt-4 mb-3">
-                <div id="nav-profile" class="pixel-btn bg-white" onclick="switchPage('profile')">MY PROFILE</div>
-                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">MY CHANNEL</div>
+            <div class="flex justify-between items-center mb-2 px-1">
+                <div id="userDisplay" class="text-[6px] font-['Press_Start_2P'] opacity-50 truncate w-32">UID: AUTH...</div>
+                <div id="creditsDisplay" class="text-[8px] font-['Press_Start_2P'] text-neo-yellow">0.00 CR</div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2 mb-3">
+                <div id="nav-profile" class="pixel-btn bg-white" onclick="switchPage('profile')">MY ARCHIVE</div>
+                <div id="nav-channel" class="pixel-btn bg-white" onclick="switchPage('channel')">BROADCAST</div>
             </div>
             <div class="grid grid-cols-3 gap-2 mb-6">
-                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">DISCOVER</div>
-                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">AD NETWORK</div>
+                <div id="nav-discover" class="pixel-btn bg-[#39ff14]" onclick="switchPage('discover')">THE GRID</div>
+                <div id="nav-ads" class="pixel-btn bg-[#ff00ff] text-white" onclick="switchPage('ads')">INSERT COIN</div>
                 <div class="pixel-btn bg-white" onclick="location.reload()">LOGOUT</div>
             </div>
         </div>
 
         <!-- AUTH ENTRANCE -->
         <div id="authView" class="block">
+            <!-- Header Box -->
             <div class="neo-box bg-[#0056b3] text-white p-10 text-center mb-6">
                 <h1 class="text-3xl font-bold font-['Press_Start_2P'] uppercase tracking-tighter">INREALLIFE</h1>
-                <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">A BETTER WORLD IS POSSIBLE</div>
+                <div class="text-[8px] mt-4 opacity-80 text-yellow-400 font-['Press_Start_2P']">NO COOKIES. NO MASTERS.</div>
             </div>
-            <div class="neo-box p-8 text-center">
-                <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase">THE GRID IS WAITING.<br>NO COOKIES. NO TRACKING.</p>
-                <button id="loginBtn" class="pixel-btn w-full text-[0.7rem] py-4 bg-white" onclick="showMainApp()">LINK START</button>
+
+            <!-- Floppy Drive Separate Box -->
+            <div class="disk-terminal">
+                <div class="text-[7px] text-[#39ff14] font-['Press_Start_2P'] tracking-widest mb-2">DISK_DRIVE_A:</div>
+                
+                <div id="draggableFloppy">
+                    <svg class="floppy-icon" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M1 1H13L15 3V15H1V1Z"/>
+                        <rect x="3" y="1" width="8" height="4" fill="white" fill-opacity="0.3"/>
+                        <rect x="4" y="10" width="8" height="5" fill="white" fill-opacity="0.8"/>
+                        <rect x="9" y="11" width="2" height="3" fill="black" fill-opacity="0.2"/>
+                    </svg>
+                </div>
+
+                <div class="disk-slot-opening"></div>
+                <div class="text-[6px] text-[#39ff14] opacity-50 font-['Press_Start_2P']">GRAB DISK TO BOOT</div>
+            </div>
+
+            <!-- Interaction Box / Drop Target -->
+            <div id="loginTarget" class="neo-box p-8 text-center drop-target">
+                <p class="text-[10px] mb-8 font-bold leading-relaxed uppercase text-gray-400">WELCOME TO THE LAST SOCIAL NETWORK.</p>
+                <div class="pixel-btn w-full text-[0.7rem] py-6 bg-white pointer-events-none border-dashed opacity-70">
+                    DROP DISK HERE (START)
+                </div>
             </div>
         </div>
 
         <!-- MAIN APP -->
         <div id="mainView" class="hidden">
-            
             <div id="page-discover" class="page-content">
                 <div class="feed-container" id="discoverFeed"></div>
             </div>
@@ -265,20 +442,46 @@
                             <div class="scanline-overlay"></div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3">
+                        <div class="mb-4">
+                            <div class="text-[8px] font-['Press_Start_2P'] mb-2 uppercase opacity-50">Lens Palettes</div>
+                            <div class="flex gap-2">
+                                <div onclick="setPalette('')" class="w-8 h-8 border-2 border-black bg-white cursor-pointer" title="Default"></div>
+                                <div onclick="tryUnlockPalette('palette-orochi', 10)" class="w-8 h-8 border-2 border-black bg-purple-600 cursor-pointer relative" title="Orochi (10 CR)">
+                                    <div id="lock-orochi" class="absolute inset-0 flex items-center justify-center text-[10px] text-white">🔒</div>
+                                </div>
+                                <div onclick="tryUnlockPalette('palette-gold', 50)" class="w-8 h-8 border-2 border-black bg-yellow-400 cursor-pointer relative" title="KOF Gold (50 CR)">
+                                    <div id="lock-gold" class="absolute inset-0 flex items-center justify-center text-[10px] text-black">🔒</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mb-4">
                             <button id="btnInitCam" onclick="initCamera()" class="pixel-btn bg-blue-500 text-white">SYNC LENS</button>
                             <button id="btnCapture" onclick="takePhoto()" class="pixel-btn bg-yellow-400 disabled">SNAPSHOT</button>
                             <button id="btnRecord" onclick="startRecording()" class="pixel-btn bg-red-500 text-white disabled">REC VIDEO</button>
-                            <button id="btnBroadcast" onclick="simulateBroadcast()" class="pixel-btn bg-red-600 text-white disabled">GO LIVE (GRID)</button>
+                            <button id="btnBroadcast" onclick="startBroadcast()" class="pixel-btn bg-red-600 text-white disabled">GO LIVE (GRID)</button>
+                        </div>
+                        
+                        <div id="donationModule" class="hidden border-t-2 border-dashed border-black pt-4">
+                            <div class="text-[8px] font-['Press_Start_2P'] mb-2 text-center text-neo-blue">DONATION_LINK: ACTIVE</div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button onclick="sendDonation(5.00)" class="pixel-btn bg-white py-2 text-[6px]">5.00 CR</button>
+                                <button onclick="sendDonation(20.00)" class="pixel-btn bg-white py-2 text-[6px]">20.00 CR</button>
+                                <button onclick="sendDonation(100.00)" class="pixel-btn bg-neo-yellow py-2 text-[6px]">100 CR</button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="neo-box">
-                    <div class="neo-header bg-black text-[#39ff14]">LIVE_COMMS</div>
+                    <div class="neo-header bg-black text-[#39ff14]">LIVE_COMMS & SPECTATORS</div>
                     <div class="p-4 bg-black">
                         <div id="chatBox">
-                            <div class="italic opacity-40 text-center py-4 text-[8px] text-white">Awaiting signal broadcast...</div>
+                            <div class="italic opacity-40 text-center py-4 text-[8px] text-white">Awaiting signal to open comms...</div>
+                        </div>
+                        <div class="mt-4 flex gap-2">
+                            <input id="chatInput" type="text" placeholder="POST COMMENT..." class="w-full bg-black border-2 border-[#39ff14] p-2 text-[8px] text-[#39ff14] font-['Press_Start_2P'] outline-none">
+                            <button onclick="sendChatMessage()" class="pixel-btn bg-[#39ff14] text-black px-4 py-0 text-[10px]">></button>
                         </div>
                     </div>
                 </div>
@@ -286,10 +489,16 @@
 
             <div id="page-ads" class="page-content hidden">
                 <div class="neo-box">
-                    <div class="neo-header bg-[#ff00ff] text-white">ADS_STATUS</div>
-                    <div class="p-10 text-center">
-                        <div class="text-[14px] font-bold mb-4 font-['Press_Start_2P']">0.00000 CR</div>
-                        <div class="text-[8px] uppercase tracking-widest">Connect your wallet to cash out</div>
+                    <div class="neo-header bg-[#ff00ff] text-white">TOKEN_EXCHANGE</div>
+                    <div class="p-6 text-center">
+                        <div class="text-[8px] uppercase mb-4 opacity-50">Current Balance</div>
+                        <div id="walletBalance" class="text-2xl font-bold mb-8 font-['Press_Start_2P'] text-neo-yellow">0.00 CR</div>
+                        
+                        <div class="grid grid-cols-1 gap-4">
+                            <button onclick="watchAd()" class="pixel-btn bg-white py-4">WATCH BOUT (REWARD: 1.00 CR)</button>
+                            <button class="pixel-btn bg-neo-yellow py-4">BUY 100 CR ($0.99)</button>
+                            <button class="pixel-btn bg-neo-blue text-white py-4">BUY 1000 CR ($4.99)</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -305,19 +514,286 @@
         </div>
     </div>
 
-    <script>
-        // --- DATA & INITIALIZATION ---
-        const feedData = [
-            { user: "Kyo_Esaka", likes: 120, comments: 45, music: "TEARS 2002", color: "#ef4444", text: "The flames are back." },
-            { user: "Iori_Yagami", likes: 666, comments: 88, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood." },
-            { user: "Terry_Wild", likes: 450, comments: 12, music: "11th STREET", color: "#2563eb", text: "Are you okay!?" }
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'inreallife-grid';
+        
+        let currentUser = null;
+        let userProfile = { credits: 0, unlockedPalettes: [] };
+        let feedData = [
+            { id: "p1", user: "Kyo_Esaka", likes: 120, comments: 45, music: "TEARS 2002", color: "#ef4444", text: "The flames are back." },
+            { id: "p2", user: "Iori_Yagami", likes: 666, comments: 88, music: "ARASHI NO SAX", color: "#9333ea", text: "Cursed by the blood." },
+            { id: "p3", user: "Terry_Wild", likes: 450, comments: 12, music: "11th STREET", color: "#2563eb", text: "Are you okay!?" }
         ];
 
-        let savedAssets = JSON.parse(localStorage.getItem('grid_archive')) || [];
+        window.initFirebaseAndShow = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && __initial_auth_token !== "") {
+                    try {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } catch (tokenErr) {
+                        await signInAnonymously(auth);
+                    }
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (authErr) {
+                console.error("Critical Auth Failure:", authErr);
+                showToast("GRID CONNECTION ERROR");
+            }
+        };
 
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userDisplay').innerText = `UID: ${user.uid.substring(0,8)}...`;
+                showMainApp();
+                setupListeners();
+            }
+        });
+
+        function setupListeners() {
+            if (!currentUser) return;
+
+            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            onSnapshot(profileDoc, (docSnap) => {
+                if (docSnap.exists()) {
+                    userProfile = docSnap.data();
+                    updateWalletUI();
+                } else {
+                    setDoc(profileDoc, { credits: 0, unlockedPalettes: [] });
+                }
+            }, (err) => console.error(err));
+
+            const archiveCol = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'archive');
+            onSnapshot(archiveCol, (snapshot) => {
+                const gallery = document.getElementById('savedCaptures');
+                gallery.innerHTML = '';
+                if (snapshot.empty) {
+                    gallery.innerHTML = '<div class="text-[8px] opacity-40 col-span-2 text-center py-10 uppercase">No signal history found</div>';
+                    return;
+                }
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    renderToGallery(data.data, data.type, docSnap.id);
+                });
+            }, (err) => console.error(err));
+
+            const likesCol = collection(db, 'artifacts', appId, 'public', 'data', 'global_likes');
+            onSnapshot(likesCol, (snapshot) => {
+                const globalLikes = {};
+                snapshot.forEach(docSnap => {
+                    globalLikes[docSnap.id] = docSnap.data().count || 0;
+                });
+                renderFeed(globalLikes);
+            }, (err) => console.error(err));
+
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
+            onSnapshot(chatCol, (snapshot) => {
+                const chatBox = document.getElementById('chatBox');
+                chatBox.innerHTML = '';
+                const msgs = [];
+                snapshot.forEach(docSnap => msgs.push({ id: docSnap.id, ...docSnap.data() }));
+                msgs.sort((a,b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+                
+                msgs.slice(-50).forEach(msg => {
+                    const div = document.createElement('div');
+                    const typeClass = msg.type || 'user';
+                    div.className = `chat-msg ${typeClass}`;
+                    
+                    if (typeClass === 'system') {
+                        div.innerHTML = `[ALERT] ${msg.text}`;
+                    } else if (typeClass === 'donation') {
+                        div.innerHTML = `[GIFT] ${msg.user.substring(0,4)} DONATED ${msg.amount} CR!`;
+                    } else {
+                        div.innerHTML = `<span class="text-white opacity-40">${msg.user.substring(0,6)}:</span> ${msg.text}`;
+                    }
+                    chatBox.appendChild(div);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, (err) => console.error(err));
+        }
+
+        window.sendChatMessage = async (text = null, type = 'user', extra = {}) => {
+            const input = document.getElementById('chatInput');
+            const msgText = text || input.value;
+            if (!msgText && type !== 'donation' || !currentUser) return;
+            
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', 'chat_msgs');
+            await addDoc(chatCol, {
+                user: currentUser.uid,
+                text: msgText || '',
+                type: type,
+                ...extra,
+                timestamp: serverTimestamp()
+            });
+            if (!text && type === 'user') input.value = "";
+        };
+
+        window.sendDonation = async (amount) => {
+            if (!currentUser) return;
+            if (userProfile.credits < amount) {
+                showToast("INSUFFICIENT CREDITS");
+                return;
+            }
+            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            await updateDoc(profileDoc, { credits: userProfile.credits - amount });
+            window.sendChatMessage(null, 'donation', { amount: amount });
+            showToast(`GIFT SENT: ${amount} CR`);
+        };
+
+        window.updateWalletUI = () => {
+            const balance = (userProfile.credits || 0).toFixed(2);
+            document.getElementById('creditsDisplay').innerText = `${balance} CR`;
+            document.getElementById('walletBalance').innerText = `${balance} CR`;
+            if (userProfile.unlockedPalettes?.includes('palette-orochi')) document.getElementById('lock-orochi').innerText = '✓';
+            if (userProfile.unlockedPalettes?.includes('palette-gold')) document.getElementById('lock-gold').innerText = '✓';
+        };
+
+        window.watchAd = async () => {
+            const splash = document.getElementById('adSplash');
+            const timer = document.getElementById('adTimer');
+            splash.style.display = 'flex';
+            let count = 5;
+            const interval = setInterval(() => {
+                count--;
+                timer.innerText = `REWARD IN ${count}...`;
+                if (count <= 0) {
+                    clearInterval(interval);
+                    splash.style.display = 'none';
+                    rewardUser(1.00);
+                    showToast("REWARD COLLECTED: 1.00 CR");
+                }
+            }, 1000);
+        };
+
+        async function rewardUser(amount) {
+            if (!currentUser) return;
+            const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+            await updateDoc(profileDoc, { credits: (userProfile.credits || 0) + amount });
+        }
+
+        window.tryUnlockPalette = async (paletteName, cost) => {
+            if (!currentUser) return;
+            if (userProfile.unlockedPalettes?.includes(paletteName)) {
+                window.setPalette(paletteName);
+                return;
+            }
+            if (userProfile.credits >= cost) {
+                const profileDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                await updateDoc(profileDoc, {
+                    credits: userProfile.credits - cost,
+                    unlockedPalettes: [...(userProfile.unlockedPalettes || []), paletteName]
+                });
+                showToast(`UNLOCKED: ${paletteName.toUpperCase()}`);
+                window.setPalette(paletteName);
+            } else {
+                showToast(`NEED ${cost} CR`);
+            }
+        };
+
+        window.toggleLike = async (postId) => {
+            if (!currentUser) return;
+            const likeDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'global_likes', postId);
+            const docSnap = await getDoc(likeDocRef);
+            let count = docSnap.exists() ? docSnap.data().count : 0;
+            await setDoc(likeDocRef, { count: count + 1 });
+        };
+
+        window.persistToArchive = async (dataUrl, type) => {
+            if (!currentUser) return;
+            try {
+                const archiveCol = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'archive');
+                await addDoc(archiveCol, { type, data: dataUrl, timestamp: serverTimestamp() });
+                window.sendChatMessage(`UID:${currentUser.uid.substring(0,4)} CAPTURED NEW ${type.toUpperCase()} SIGNAL.`, 'system');
+            } catch (error) {
+                console.error(error);
+                showToast("SIGNAL OVERFLOW");
+            }
+        };
+
+        window.deleteFromArchive = async (docId) => {
+            if (!currentUser) return;
+            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'archive', docId);
+            await deleteDoc(docRef);
+        };
+
+        function showToast(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'error-toast';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function renderFeed(globalLikes = {}) {
+            const feed = document.getElementById('discoverFeed');
+            feed.innerHTML = feedData.map(item => {
+                const likesCount = globalLikes[item.id] || item.likes;
+                return `
+                    <div class="feed-item">
+                        <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
+                            <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
+                        </div>
+                        <div class="social-sidebar">
+                            <button class="social-btn text-white" onclick="toggleLike('${item.id}')">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
+                                <span>${likesCount}</span>
+                            </button>
+                            <button class="social-btn" onclick="switchPage('channel')">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
+                                <span>COMMS</span>
+                            </button>
+                            <button class="social-btn" onclick="copyGridLink()">
+                                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.637-2.31l-4.94-2.47a3 3 0 00-.02-.319z"/></svg>
+                                <span>SHARE</span>
+                            </button>
+                        </div>
+                        <div class="feed-ui">
+                            <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
+                            <div class="text-[8px] mb-4">${item.text}</div>
+                            <div class="marquee-container">
+                                <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderToGallery(src, type, docId) {
+            const gallery = document.getElementById('savedCaptures');
+            if (gallery.innerText.includes('No signal history')) gallery.innerHTML = '';
+            const element = document.createElement('div');
+            element.className = "relative border-2 border-black shadow-[2px_2px_0px_black] overflow-hidden group h-32";
+            if (type === 'image') element.innerHTML = `<img src="${src}" class="w-full h-full object-cover">`;
+            else element.innerHTML = `<video src="${src}" class="captured-video h-full w-full object-cover" autoplay loop muted></video><div class="scanline-overlay"></div>`;
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = "X";
+            delBtn.className = "absolute top-0 left-0 bg-red-600 text-white text-[8px] p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50";
+            delBtn.onclick = (e) => { e.stopPropagation(); window.deleteFromArchive(docId); };
+            element.appendChild(delBtn);
+            gallery.prepend(element);
+        }
+
+        renderFeed();
+    </script>
+
+    <script>
         function hideOverlay() {
-            document.getElementById('loadingOverlay').style.opacity = '0';
-            setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 500);
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.style.display = 'none', 500);
+            }
         }
 
         function showMainApp() {
@@ -330,50 +806,25 @@
         function switchPage(id) {
             document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('.pixel-btn').forEach(b => {
-                if (!b.id.startsWith('nav-')) return;
+                if (!b.id && !b.id?.startsWith('nav-')) return;
                 b.classList.remove('bg-[#39ff14]', 'text-black', 'bg-[#ff00ff]', 'text-white');
                 b.classList.add('bg-white', 'text-black');
             });
-            document.getElementById('page-' + id).classList.remove('hidden');
+            const page = document.getElementById('page-' + id);
+            if (page) page.classList.remove('hidden');
             const navBtn = document.getElementById('nav-' + id);
             if(navBtn) {
                 navBtn.classList.remove('bg-white');
                 if (id === 'ads') navBtn.classList.add('bg-[#ff00ff]', 'text-white');
                 else navBtn.classList.add('bg-[#39ff14]', 'text-black');
             }
-            if (id === 'discover') renderFeed();
         }
 
-        function renderFeed() {
-            const feed = document.getElementById('discoverFeed');
-            feed.innerHTML = feedData.map(item => `
-                <div class="feed-item">
-                    <div class="w-full h-full opacity-60" style="background: linear-gradient(135deg, #000, ${item.color})">
-                        <div class="h-full w-full flex items-center justify-center font-['Press_Start_2P'] text-white opacity-10 text-4xl">${item.user[0]}</div>
-                    </div>
-                    <div class="social-sidebar">
-                        <button class="social-btn" onclick="this.style.color='#ef4444'">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
-                            <span>${item.likes}</span>
-                        </button>
-                        <button class="social-btn">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7z"/></svg>
-                            <span>${item.comments}</span>
-                        </button>
-                        <button class="social-btn" onclick="copyGridLink()">
-                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.637-2.31l-4.94-2.47a3 3 0 00-.02-.319z"/></svg>
-                            <span>SHARE</span>
-                        </button>
-                    </div>
-                    <div class="feed-ui">
-                        <div class="font-bold text-[10px] mb-2 font-['Press_Start_2P']">@${item.user}</div>
-                        <div class="text-[8px] mb-4">${item.text}</div>
-                        <div class="marquee-container">
-                            <div class="marquee-text">♫ ${item.music} — ♫ ${item.music}</div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+        function setPalette(cls) {
+            const v = document.getElementById('videoElement');
+            const c = document.getElementById('photoCanvas');
+            if (v) v.className = cls;
+            if (c) c.className = 'hidden w-full h-full ' + cls;
         }
 
         function copyGridLink() {
@@ -385,26 +836,18 @@
             document.body.removeChild(dummy);
         }
 
-        // --- CAMERA, PERSISTENCE & GALLERY SYSTEM ---
         let video = document.getElementById('videoElement');
         let canvas = document.getElementById('photoCanvas');
         let stream = null;
         let mediaRecorder = null;
         let recordedChunks = [];
 
-        function persistToArchive(dataUrl, type) {
-            if (type === 'image') {
-                savedAssets.unshift({ type, data: dataUrl, timestamp: Date.now() });
-                localStorage.setItem('grid_archive', JSON.stringify(savedAssets.slice(0, 10)));
-            }
-        }
-
         async function initCamera() {
             const btn = document.getElementById('btnInitCam');
             const placeholder = document.getElementById('cameraPlaceholder');
             btn.innerText = "LINKING...";
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { width: 480, height: 360, facingMode: "user" }, audio: false });
                 video.srcObject = stream;
                 video.onloadedmetadata = () => {
                     video.play();
@@ -415,125 +858,135 @@
                     btn.innerText = "LENS ACTIVE";
                     btn.classList.add('bg-green-500');
                 };
-            } catch (err) {
-                btn.innerText = "LINK FAILED";
-            }
+            } catch (err) { btn.innerText = "LINK FAILED"; }
         }
 
         async function takePhoto() {
             if (!stream) return;
-
-            // Visual Feedback: Flash effect
             const container = document.querySelector('.camera-container');
             container.style.filter = 'brightness(3)';
             setTimeout(() => container.style.filter = '', 100);
-
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
+            ctx.filter = getComputedStyle(video).filter;
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imgData = canvas.toDataURL('image/png');
-            renderToGallery(imgData, 'image');
-            persistToArchive(imgData, 'image');
-
+            const imgData = canvas.toDataURL('image/jpeg', 0.5); 
+            window.persistToArchive(imgData, 'image');
             canvas.classList.remove('hidden');
             video.classList.add('hidden');
             document.getElementById('btnBroadcast').classList.remove('disabled');
-        }
-
-        function renderToGallery(src, type) {
-            const gallery = document.getElementById('savedCaptures');
-            if (gallery.innerText.includes('No signal history')) gallery.innerHTML = '';
-            
-            const element = document.createElement('div');
-            element.className = "relative border-2 border-black shadow-[2px_2px_0px_black] overflow-hidden group";
-            
-            if (type === 'image') {
-                element.innerHTML = `<img src="${src}" class="w-full h-auto">`;
-            } else {
-                element.innerHTML = `
-                    <video src="${src}" class="captured-video" autoplay loop muted></video>
-                    <div class="scanline-overlay"></div>
-                    <div class="absolute top-1 right-1 bg-black text-[#39ff14] text-[5px] px-1 font-['Press_Start_2P']">MOV</div>
-                `;
-            }
-            
-            const delBtn = document.createElement('button');
-            delBtn.innerHTML = "X";
-            delBtn.className = "absolute top-0 left-0 bg-red-600 text-white text-[8px] p-1 opacity-0 group-hover:opacity-100 transition-opacity z-50";
-            delBtn.onclick = (e) => {
-                e.stopPropagation();
-                element.remove();
-                // Basic cleanup of local storage if it's the exact match (simplified)
-                if (type === 'image') {
-                    savedAssets = savedAssets.filter(a => a.data !== src);
-                    localStorage.setItem('grid_archive', JSON.stringify(savedAssets));
-                }
-            };
-            element.appendChild(delBtn);
-            gallery.prepend(element);
         }
 
         function startRecording() {
             if (!stream) return;
             recordedChunks = [];
             mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-            
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) recordedChunks.push(event.data);
-            };
-
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
             mediaRecorder.onstop = () => {
                 const blob = new Blob(recordedChunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                renderToGallery(url, 'video');
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => window.persistToArchive(reader.result, 'video');
                 document.getElementById('recIndicator').classList.add('hidden');
                 document.getElementById('btnRecord').innerText = "REC VIDEO";
                 document.getElementById('btnBroadcast').classList.remove('disabled');
             };
-
             mediaRecorder.start();
             document.getElementById('recIndicator').classList.remove('hidden');
             document.getElementById('btnRecord').innerText = "STOPPING...";
-            
-            setTimeout(() => {
-                if (mediaRecorder.state === "recording") mediaRecorder.stop();
-            }, 4000);
+            setTimeout(() => { if (mediaRecorder.state === "recording") mediaRecorder.stop(); }, 2500);
         }
 
-        function simulateBroadcast() {
-            const chat = document.getElementById('chatBox');
-            chat.innerHTML = "";
-            const messages = [
-                { u: "KYO_01", m: "VIDEO SIGNAL RECEIVED!" },
-                { u: "MAI_FAN", m: "The 16-bit quality is amazing." },
-                { u: "GRID_WATCH", m: "TRANSMISSION SUCCESSFUL." }
-            ];
-            let i = 0;
-            const interval = setInterval(() => {
-                if (i >= messages.length) { clearInterval(interval); return; }
-                const div = document.createElement('div');
-                div.className = "text-[8px] mb-2 font-bold uppercase border-l-2 border-[#39ff14] pl-2";
-                div.innerHTML = `<span class="text-white opacity-60">${messages[i].u}:</span> ${messages[i].m}`;
-                chat.appendChild(div);
-                chat.scrollTop = chat.scrollHeight;
-                i++;
-            }, 1000);
-            document.getElementById('btnBroadcast').innerText = "LIVE ON GRID";
+        function startBroadcast() {
+            window.sendChatMessage(`USER IS NOW STREAMING LIVE ON THE GRID. COMMENCE OBSERVATION.`, 'system');
+            document.getElementById('btnBroadcast').innerText = "BROADCASTING";
+            document.getElementById('btnBroadcast').classList.add('bg-green-600');
+            document.getElementById('donationModule').classList.remove('hidden');
         }
 
-        // --- WINDOW LISTENERS ---
-        window.addEventListener('DOMContentLoaded', () => {
-            savedAssets.forEach(asset => renderToGallery(asset.data, asset.type));
-        });
+        // DRAG AND DROP LOGIC
+        const floppy = document.getElementById('draggableFloppy');
+        const target = document.getElementById('loginTarget');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
 
-        window.addEventListener('resize', () => {
-            if(stream) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+        const handleDragStart = (e) => {
+            isDragging = true;
+            floppy.classList.add('dragging');
+            const touch = e.type === 'touchstart' ? e.touches[0] : e;
+            startX = touch.clientX;
+            startY = touch.clientY;
+            initialLeft = floppy.offsetLeft;
+            initialTop = floppy.offsetTop;
+        };
+
+        const handleDragMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const touch = e.type === 'touchmove' ? e.touches[0] : e;
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+
+            floppy.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            // Collision detection with target
+            const floppyRect = floppy.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+
+            const isHovering = (
+                floppyRect.left < targetRect.right &&
+                floppyRect.right > targetRect.left &&
+                floppyRect.top < targetRect.bottom &&
+                floppyRect.bottom > targetRect.top
+            );
+
+            if (isHovering) {
+                target.classList.add('hovered');
+            } else {
+                target.classList.remove('hovered');
             }
-        });
+        };
+
+        const handleDragEnd = (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            floppy.classList.remove('dragging');
+
+            const floppyRect = floppy.getBoundingClientRect();
+            const targetRect = target.getBoundingClientRect();
+
+            const isHovering = (
+                floppyRect.left < targetRect.right &&
+                floppyRect.right > targetRect.left &&
+                floppyRect.top < targetRect.bottom &&
+                floppyRect.bottom > targetRect.top
+            );
+
+            if (isHovering) {
+                // Success: Snap disk and trigger login
+                floppy.style.opacity = '0';
+                target.innerHTML = `
+                    <div class="animate-ping text-neo-green font-['Press_Start_2P'] text-[10px] mb-4">AUTHENTICATING...</div>
+                    <div class="text-[8px] text-gray-500 font-['Press_Start_2P'] uppercase">Disk accepted. Booting Grid.</div>
+                `;
+                setTimeout(() => {
+                    window.initFirebaseAndShow();
+                }, 800);
+            } else {
+                // Reset position
+                floppy.style.transform = `translate(0, 0)`;
+                target.classList.remove('hovered');
+            }
+        };
+
+        floppy.addEventListener('mousedown', handleDragStart);
+        window.addEventListener('mousemove', handleDragMove);
+        window.addEventListener('mouseup', handleDragEnd);
+
+        floppy.addEventListener('touchstart', handleDragStart, { passive: false });
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
 
         window.onload = () => setTimeout(hideOverlay, 1000);
     </script>
