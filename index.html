@@ -1,310 +1,315 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, onSnapshot, query, addDoc } from 'firebase/firestore';
 
-/**
- * GITHUB COMPATIBILITY LAYER
- * Standard React builds use process.env.
- * If these aren't set in your GitHub Secrets/Actions, 
- * the app will fall back to the environment globals or empty defaults.
- */
-const firebaseConfig = typeof process !== 'undefined' && process.env.REACT_APP_FIREBASE_CONFIG 
-  ? JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG)
-  : (typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {});
+// --- NEO GEO STYLING (Converted from your HTML/CSS) ---
+const neoStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap');
 
-const appId = typeof process !== 'undefined' && process.env.REACT_APP_ID 
-  ? process.env.REACT_APP_ID 
-  : (typeof __app_id !== 'undefined' ? __app_id : 'irl-unified-grid');
+  :root {
+    --neo-blue: #0056b3;
+    --neo-yellow: #facc15;
+    --neo-red: #ef4444;
+    --neo-green: #39ff14;
+    --neo-magenta: #ff00ff;
+  }
 
-// Initialize Firebase
+  .neo-bg {
+    background-color: #e5e7eb;
+    background-image: radial-gradient(#000 1px, transparent 1px);
+    background-size: 16px 16px;
+    font-family: 'Courier Prime', monospace;
+  }
+
+  .neo-box {
+    border: 4px solid black;
+    box-shadow: 6px 6px 0px 0px black;
+    background-color: white;
+  }
+
+  .pixel-btn {
+    border: 4px solid black;
+    box-shadow: 4px 4px 0px black;
+    font-family: 'Press Start 2P', cursive;
+    transition: all 0.05s;
+    user-select: none;
+    cursor: pointer;
+  }
+
+  .pixel-btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0px black;
+    filter: brightness(1.2);
+  }
+
+  .pixel-btn.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(1);
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .animate-blink { animation: blink 1s infinite; }
+`;
+
+// --- FIREBASE CONFIG ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' 
+  ? JSON.parse(__firebase_config) 
+  : { apiKey: "", authDomain: "", projectId: "", storageBucket: "", messagingSenderId: "", appId: "" };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'inreallife-grid';
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState({ balance: 0, archive: [], lastActive: Date.now() });
-  const [bootStatus, setBootStatus] = useState(0);
+  const [view, setView] = useState('auth'); // auth, discover, channel, ads, profile
+  const [bootProgress, setBootProgress] = useState(0);
   const [isBooting, setIsBooting] = useState(false);
-  const [currentPage, setCurrentPage] = useState('auth');
-  const [streamActive, setStreamActive] = useState(false);
-  const [notification, setNotification] = useState('');
+  const [balance, setBalance] = useState(0);
   const [isLive, setIsLive] = useState(false);
+  const [streamActive, setStreamActive] = useState(false);
+  const [archive, setArchive] = useState([]);
+  const [statusMsg, setStatusMsg] = useState('COMMAND_READY_');
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
-  const streamRef = useRef(null);
   const chunksRef = useRef([]);
 
-  // --- (1) AUTHENTICATION (KOF 2002 Style Loader) ---
+  // Init Auth
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (err) {
-        console.error("Auth failed:", err);
-      }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    signInAnonymously(auth).catch(console.error);
+    return onAuthStateChanged(auth, (u) => {
       if (u) setUser(u);
     });
-    return () => unsubscribe();
   }, []);
 
-  // --- (2) DATA PERSISTENCE ---
-  useEffect(() => {
-    if (!user) return;
-    // Path following Rule 1: /artifacts/{appId}/users/{userId}/{collectionName}
-    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-    const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
-      if (docSnap.exists()) {
-        setProfile(docSnap.data());
-      } else {
-        setDoc(userDocRef, { 
-          balance: 0, 
-          archive: [], 
-          uid: user.uid,
-          createdAt: Date.now() 
-        });
-      }
-    }, (error) => console.error("Firestore Error:", error));
-    return () => unsubscribe();
-  }, [user]);
-
-  // --- LOGIC FUNCTIONS ---
+  // Boot Sequence
   const handleBoot = () => {
     setIsBooting(true);
     let progress = 0;
     const interval = setInterval(() => {
-      progress += Math.random() * 20;
+      progress += Math.random() * 15;
       if (progress >= 100) {
-        setBootStatus(100);
+        progress = 100;
         clearInterval(interval);
         setTimeout(() => {
-          setCurrentPage('discover');
+          setView('discover');
           setIsBooting(false);
         }, 800);
-      } else {
-        setBootStatus(progress);
       }
-    }, 120);
+      setBootProgress(progress);
+    }, 100);
   };
 
-  const showNotify = (msg) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(''), 2500);
-  };
-
-  const syncLens = async (e) => {
-    if(e) e.preventDefault(); 
+  // Camera Logic
+  const initCamera = async () => {
     try {
-      const constraints = {
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, 
-        audio: true
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       if (videoRef.current) {
-        // Prevent iOS full-screen hijack
-        const previewStream = new MediaStream([stream.getVideoTracks()[0]]);
-        videoRef.current.srcObject = previewStream;
-        videoRef.current.setAttribute('playsinline', '');
-        videoRef.current.muted = true; 
-        await videoRef.current.play();
+        videoRef.current.srcObject = stream;
         setStreamActive(true);
-        showNotify("LENS_SYNCED");
+        setStatusMsg('LENS_SYNCED');
+        
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        mediaRecorderRef.current.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+        mediaRecorderRef.current.onstop = () => {
+          const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          setArchive(prev => [{ id: Date.now(), url, type: 'video' }, ...prev]);
+          chunksRef.current = [];
+        };
       }
     } catch (err) {
-      showNotify("SIGNAL_BLOCKED");
+      setStatusMsg('SIGNAL_BLOCKED');
     }
   };
 
-  const takeSnapshot = async () => {
-    if (!streamActive || !videoRef.current || !user) return;
+  const takeSnapshot = () => {
+    if (!streamActive || !videoRef.current) return;
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
-    // Apply KOF Arcade filter (high contrast/mono)
-    ctx.filter = 'grayscale(100%) contrast(1.5) brightness(1.1)';
     ctx.drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-    
-    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-    await updateDoc(userDocRef, {
-      archive: arrayUnion({ id: Date.now(), type: 'image', url: dataUrl })
-    });
-    showNotify("FRAME_ARCHIVED");
+    const url = canvas.toDataURL('image/png');
+    setArchive(prev => [{ id: Date.now(), url, type: 'image' }, ...prev]);
+    setStatusMsg('SNAPSHOT_SAVED');
+    setTimeout(() => setStatusMsg(isLive ? 'UPLINK_STABLE' : 'COMMAND_READY_'), 2000);
   };
 
-  const startRec = () => {
-    if (!streamActive || !streamRef.current || !user) return;
-    try {
-      chunksRef.current = [];
-      mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-      mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
-      mediaRecorderRef.current.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = async () => {
-          const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-          await updateDoc(userDocRef, {
-            archive: arrayUnion({ id: Date.now(), type: 'video', url: reader.result })
-          });
-          showNotify("CLIP_ARCHIVED");
-        };
-      };
-      mediaRecorderRef.current.start();
-      showNotify("REC_START");
-      setTimeout(() => {
-        if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
-      }, 4000);
-    } catch (err) {
-      showNotify("REC_FAILED");
-    }
+  const startRecording = () => {
+    if (!streamActive || !mediaRecorderRef.current) return;
+    chunksRef.current = [];
+    mediaRecorderRef.current.start();
+    setStatusMsg('BUFFERING...');
+    setTimeout(() => {
+      mediaRecorderRef.current.stop();
+      setStatusMsg('SIGNAL_CAPTURED');
+    }, 5000);
   };
-
-  const mineCR = async () => {
-    if (!user) return;
-    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-    await updateDoc(userDocRef, { balance: profile.balance + 1.0 });
-    showNotify("+1.00 CREDIT");
-  };
-
-  // --- UI CLASSES (NEO GEO / KOF 2002 AESTHETIC) ---
-  const neoBox = "border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-4 overflow-hidden";
-  const pixelBtn = "border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_0px] font-['Press_Start_2P'] text-[9px] p-3 text-center cursor-pointer uppercase select-none transition-all";
 
   return (
-    <div className="fixed inset-0 bg-zinc-800 p-4 font-mono flex flex-col items-center overflow-hidden">
-      {/* Font Injection for Arcade Look */}
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        .arcade-font { font-family: 'Press_Start_2P', cursive; }
-        ::-webkit-scrollbar { display: none; }
-      `}</style>
-      
-      {/* HEADER BAR */}
-      <div className="w-full max-w-md bg-black text-white p-2 mb-4 border-b-2 border-zinc-600 flex justify-between items-center z-50 arcade-font text-[7px]">
-        <span className="text-yellow-400">1P_INSERT_COIN</span>
-        <span className="truncate ml-4 opacity-70">UID: {user?.uid.slice(0,8) || "..."}</span>
-      </div>
+    <div className="min-h-screen neo-bg p-4 flex flex-col items-center">
+      <style>{neoStyles}</style>
 
-      <div className="w-full max-w-md flex-1 flex flex-col relative overflow-hidden">
-        
-        {/* NOTIFICATIONS */}
-        {notification && (
-          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[100] bg-fuchsia-500 text-white border-4 border-black p-3 arcade-font text-[8px] shadow-[4px_4px_0px_black] w-3/4 text-center animate-bounce">
-            {notification}
+      <div className="w-full max-w-[440px]">
+        {/* TOP NAV */}
+        {view !== 'auth' && (
+          <div className="mb-6 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setView('profile')}
+                className={`pixel-btn p-3 text-[10px] ${view === 'profile' ? 'bg-[#39ff14]' : 'bg-white'}`}
+              >
+                MY ARCHIVE
+              </button>
+              <button 
+                onClick={() => setView('channel')}
+                className={`pixel-btn p-3 text-[10px] ${view === 'channel' ? 'bg-[#39ff14]' : 'bg-white'}`}
+              >
+                LIVE UPLINK
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => setView('discover')} className={`pixel-btn p-2 text-[8px] ${view === 'discover' ? 'bg-[#39ff14]' : 'bg-white'}`}>DISCOVER</button>
+              <button onClick={() => setView('ads')} className={`pixel-btn p-2 text-[8px] ${view === 'ads' ? 'bg-[#ff00ff] text-white' : 'bg-white'}`}>AD NETWORK</button>
+              <button onClick={() => window.location.reload()} className="pixel-btn p-2 text-[8px] bg-white">LOGOUT</button>
+            </div>
           </div>
         )}
 
-        {currentPage === 'auth' ? (
-          <div className="space-y-6 pt-12">
-            <div className={`${neoBox} bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-10 text-center relative`}>
-              <div className="absolute top-2 right-2 w-4 h-4 bg-red-500 rounded-full animate-ping" />
-              <h1 className="text-2xl arcade-font leading-relaxed tracking-tighter italic">IRL_GRID<br/>VER.2002</h1>
+        {/* VIEW: AUTH / BOOT */}
+        {view === 'auth' && (
+          <div className="space-y-4">
+            <div className="neo-box bg-[#0056b3] text-white p-8 text-center">
+              <h1 className="text-2xl font-bold font-['Press_Start_2P'] uppercase">INREALLIFE</h1>
+              <div className="text-[8px] mt-4 text-yellow-400 font-['Press_Start_2P']">NO COOKIES. NO MASTERS.</div>
             </div>
-            
-            <div className={`${neoBox} bg-zinc-900 p-6 arcade-font`}>
-              <div className="text-[10px] text-zinc-400 mb-2">SYSTEM_CHECK...</div>
-              <div className="w-full h-4 bg-black border-2 border-zinc-700 relative overflow-hidden mb-4">
-                <div className="h-full bg-green-400 transition-all duration-150" style={{ width: `${bootStatus}%` }} />
+
+            <div className="neo-box bg-black p-6 text-[#39ff14] font-['Press_Start_2P'] text-[8px]">
+              <div className="opacity-60 mb-2">DISK_DRIVE_A:</div>
+              <div className="w-full h-3 border-2 border-[#333] bg-black mb-2 overflow-hidden">
+                <div className="h-full bg-[#39ff14] transition-all duration-100" style={{ width: `${bootProgress}%` }} />
               </div>
-              <div className="text-[8px] text-green-400 text-center">{isBooting ? 'UPLINKING_DATA...' : 'WAITING_FOR_PLAYER'}</div>
+              <div className="text-center">{isBooting ? 'BOOTING...' : 'READY TO BOOT'}</div>
             </div>
 
-            <button onClick={handleBoot} disabled={isBooting} className={`${pixelBtn} w-full py-6 text-xs bg-yellow-400 hover:bg-yellow-300`}>
-              {isBooting ? 'BOOTING...' : 'PUSH_START_BUTTON'}
-            </button>
+            <div className="neo-box p-6">
+              <button 
+                onClick={handleBoot}
+                disabled={isBooting}
+                className={`pixel-btn w-full py-6 bg-white border-dashed text-[10px] ${isBooting ? 'disabled' : ''}`}
+              >
+                INSERT DISK (START)
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* NAVIGATION TABS */}
-            <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
-              <button onClick={() => setCurrentPage('discover')} className={`${pixelBtn} ${currentPage === 'discover' ? 'bg-green-400' : 'bg-white'}`}>FEEDS</button>
-              <button onClick={() => setCurrentPage('channel')} className={`${pixelBtn} ${currentPage === 'channel' ? 'bg-green-400' : 'bg-white'}`}>LENS</button>
-              <button onClick={() => setCurrentPage('profile')} className={`${pixelBtn} ${currentPage === 'profile' ? 'bg-green-400' : 'bg-white'}`}>FILES</button>
+        )}
+
+        {/* VIEW: DISCOVER (FEED) */}
+        {view === 'discover' && (
+          <div className="neo-box bg-black min-h-[500px] overflow-hidden">
+             <div className="p-4 text-[#39ff14] font-['Press_Start_2P'] text-[10px] border-b-4 border-black bg-white text-black">
+                GLOBAL_FEED
+             </div>
+             <div className="flex flex-col items-center justify-center h-[400px] text-white font-['Press_Start_2P'] text-[8px] opacity-40">
+                [ SCANNING FOR SIGNALS ]
+             </div>
+          </div>
+        )}
+
+        {/* VIEW: CHANNEL (CAMERA) */}
+        {view === 'channel' && (
+          <div className="neo-box overflow-hidden">
+            <div className="p-2 bg-[#facc15] font-['Press_Start_2P'] text-[10px] border-b-4 border-black">
+              UPLINK_TERMINAL
             </div>
-
-            {/* MAIN CONTENT AREA */}
-            <div className="flex-1 overflow-hidden">
-                {currentPage === 'discover' && (
-                <div className={`${neoBox} bg-black h-full overflow-y-scroll snap-y snap-mandatory border-none`}>
-                    <div className="snap-start h-full flex items-center justify-center flex-col p-6 text-center">
-                      <div className="text-green-400 arcade-font text-[10px] mb-4 animate-pulse">SEARCHING_FOR_SIGNALS...</div>
-                      <div className="text-zinc-600 text-[8px] arcade-font">SCROLL_DOWN_TO_VIEW_ARCHIVE</div>
-                    </div>
-                    {profile.archive.slice(-10).reverse().map((item) => (
-                    <div key={item.id} className="snap-start h-full relative group bg-zinc-900 border-b-4 border-black">
-                        {item.type === 'video' ? 
-                        <video src={item.url} autoPlay muted loop playsInline className="w-full h-full object-cover grayscale opacity-80" /> :
-                        <img src={item.url} className="w-full h-full object-cover grayscale opacity-80" />
-                        }
-                        <div className="absolute bottom-4 left-4 arcade-font text-[8px] text-white bg-black/50 p-1">FRAME_ID_{item.id.toString().slice(-4)}</div>
-                    </div>
-                    ))}
-                </div>
+            <div className="p-4 bg-gray-100">
+              <div className="relative aspect-[9/16] bg-black border-4 border-black overflow-hidden flex items-center justify-center">
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className={`w-full h-full object-cover ${!streamActive ? 'hidden' : ''}`}
+                />
+                {!streamActive && (
+                  <div className="text-[#39ff14] font-['Press_Start_2P'] text-[8px] text-center p-4">
+                    [ SIGNAL_LOST ]<br/><br/>SYNC LENS TO BROADCAST
+                  </div>
                 )}
+                {isLive && <div className="absolute top-2 right-2 px-2 py-1 bg-black text-[#39ff14] border border-[#39ff14] font-['Press_Start_2P'] text-[8px] animate-blink">LIVE</div>}
+              </div>
 
-                {currentPage === 'channel' && (
-                <div className={`${neoBox} h-full flex flex-col p-3 bg-zinc-100`}>
-                    <div className="flex-1 bg-black border-4 border-black relative overflow-hidden mb-4 flex items-center justify-center">
-                        <video 
-                            ref={videoRef} 
-                            autoPlay 
-                            playsInline 
-                            muted 
-                            className={`w-full h-full object-cover grayscale-0 brightness-110 contrast-125 ${!streamActive ? 'hidden' : ''}`} 
-                        />
-                        {!streamActive && <div className="text-green-400 arcade-font text-[8px] animate-pulse text-center">LENS_DISCONNECTED<br/><br/>PRESS_SYNC</div>}
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 mb-3 shrink-0">
-                        <button onClick={syncLens} className={`${pixelBtn} bg-blue-500 text-white`}>SYNC</button>
-                        <button onClick={() => setIsLive(!isLive)} className={`${pixelBtn} ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-zinc-300'}`}>{isLive ? 'LIVE' : 'STANDBY'}</button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 shrink-0">
-                        <button onClick={startRec} className={`${pixelBtn} bg-red-600 text-white`}>REC</button>
-                        <button onClick={takeSnapshot} className={`${pixelBtn} bg-yellow-400`}>SNAP</button>
-                        <button onClick={mineCR} className={`${pixelBtn} bg-green-500 text-white`}>MINE</button>
-                    </div>
+              <div className="mt-4 neo-box bg-black p-3 space-y-3 shadow-none border-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={initCamera} className="pixel-btn bg-[#0056b3] text-white p-2 text-[8px]">SYNC LENS</button>
+                  <button 
+                    onClick={() => setIsLive(!isLive)} 
+                    disabled={!streamActive}
+                    className={`pixel-btn p-2 text-[8px] ${!streamActive ? 'disabled' : ''} ${isLive ? 'bg-white text-red-600' : 'bg-[#39ff14]'}`}
+                  >
+                    {isLive ? 'END LIVE' : 'GO LIVE'}
+                  </button>
                 </div>
-                )}
-
-                {currentPage === 'profile' && (
-                <div className={`${neoBox} h-full bg-zinc-900 flex flex-col p-2`}>
-                    <div className="flex justify-between items-center mb-4 p-2 bg-black text-white arcade-font text-[8px]">
-                      <span>WALLET: {profile.balance.toFixed(2)} CR</span>
-                      <span>FILES: {profile.archive.length}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 overflow-y-auto flex-1">
-                    {profile.archive.slice().reverse().map((item) => (
-                        <div key={item.id} className="border-2 border-black p-1 bg-zinc-800 aspect-square overflow-hidden hover:border-yellow-400 transition-colors">
-                            {item.type === 'video' ? 
-                            <video src={item.url} controls playsInline className="w-full h-full object-cover grayscale" /> :
-                            <img src={item.url} className="w-full h-full object-cover grayscale" />
-                            }
-                        </div>
-                    ))}
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button onClick={startRecording} disabled={!streamActive} className={`pixel-btn bg-[#ef4444] text-white p-2 text-[8px] ${!streamActive ? 'disabled' : ''}`}>REC</button>
+                  <button onClick={takeSnapshot} disabled={!streamActive} className={`pixel-btn bg-[#facc15] p-2 text-[8px] ${!streamActive ? 'disabled' : ''}`}>SNAP</button>
+                  <button onClick={() => setBalance(b => b + 100)} className="pixel-btn bg-[#ff00ff] text-white p-2 text-[8px]">DONATE</button>
                 </div>
-                )}
+                <div className="text-center text-[#39ff14] font-['Press_Start_2P'] text-[6px] py-1">
+                  {statusMsg}
+                </div>
+              </div>
             </div>
+          </div>
+        )}
 
-            {/* FOOTER BAR */}
-            <div className="mt-2 text-[6px] arcade-font text-zinc-500 flex justify-between uppercase">
-              <span>System_OK</span>
-              <span>Grid_Unified_OS_V2</span>
+        {/* VIEW: ARCHIVE */}
+        {view === 'profile' && (
+          <div className="neo-box">
+             <div className="p-2 bg-[#facc15] font-['Press_Start_2P'] text-[10px] border-b-4 border-black">
+              GRID_ARCHIVE
+            </div>
+            <div className="p-4 grid grid-cols-1 gap-4 bg-gray-200 min-h-[300px]">
+              {archive.length === 0 ? (
+                <div className="text-[8px] opacity-40 text-center py-20 uppercase font-['Press_Start_2P']">No signal history</div>
+              ) : (
+                archive.map(item => (
+                  <div key={item.id} className="neo-box p-2 bg-black border-4 border-black">
+                    {item.type === 'video' ? (
+                      <video src={item.url} controls className="w-full grayscale hover:grayscale-0 transition" />
+                    ) : (
+                      <img src={item.url} className="w-full grayscale hover:grayscale-0 transition" alt="snapshot" />
+                    )}
+                    <div className="text-[6px] text-[#39ff14] mt-2 font-['Press_Start_2P'] uppercase">
+                      {item.type}_UPLINK_{item.id}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW: ADS / WALLET */}
+        {view === 'ads' && (
+          <div className="neo-box">
+             <div className="p-2 bg-[#ff00ff] text-white font-['Press_Start_2P'] text-[10px] border-b-4 border-black">
+              WALLET_STATUS
+            </div>
+            <div className="p-10 text-center font-['Press_Start_2P']">
+              <div className="text-[14px] mb-4">{balance.toFixed(2)} CR</div>
+              <div className="text-[8px] uppercase">GRID_CREDITS_FOUND</div>
             </div>
           </div>
         )}
