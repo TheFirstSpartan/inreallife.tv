@@ -1,14 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot, updateDoc, arrayUnion } from 'firebase/firestore';
 
-// Firebase configuration using environment variables
-const firebaseConfig = JSON.parse(__firebase_config);
+/**
+ * GITHUB COMPATIBILITY LAYER
+ * Standard React builds use process.env.
+ * If these aren't set in your GitHub Secrets/Actions, 
+ * the app will fall back to the environment globals or empty defaults.
+ */
+const firebaseConfig = typeof process !== 'undefined' && process.env.REACT_APP_FIREBASE_CONFIG 
+  ? JSON.parse(process.env.REACT_APP_FIREBASE_CONFIG)
+  : (typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {});
+
+const appId = typeof process !== 'undefined' && process.env.REACT_APP_ID 
+  ? process.env.REACT_APP_ID 
+  : (typeof __app_id !== 'undefined' ? __app_id : 'irl-unified-grid');
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'irl-unified-grid';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -16,22 +28,26 @@ export default function App() {
   const [bootStatus, setBootStatus] = useState(0);
   const [isBooting, setIsBooting] = useState(false);
   const [currentPage, setCurrentPage] = useState('auth');
-  const [isLive, setIsLive] = useState(false);
   const [streamActive, setStreamActive] = useState(false);
   const [notification, setNotification] = useState('');
+  const [isLive, setIsLive] = useState(false);
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
 
-  // --- (1) AUTHENTICATION ---
+  // --- (1) AUTHENTICATION (KOF 2002 Style Loader) ---
   useEffect(() => {
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth failed:", err);
       }
     };
     initAuth();
@@ -44,6 +60,7 @@ export default function App() {
   // --- (2) DATA PERSISTENCE ---
   useEffect(() => {
     if (!user) return;
+    // Path following Rule 1: /artifacts/{appId}/users/{userId}/{collectionName}
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
     const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -65,7 +82,7 @@ export default function App() {
     setIsBooting(true);
     let progress = 0;
     const interval = setInterval(() => {
-      progress += Math.random() * 15;
+      progress += Math.random() * 20;
       if (progress >= 100) {
         setBootStatus(100);
         clearInterval(interval);
@@ -76,68 +93,50 @@ export default function App() {
       } else {
         setBootStatus(progress);
       }
-    }, 100);
+    }, 120);
   };
 
   const showNotify = (msg) => {
     setNotification(msg);
-    setTimeout(() => setNotification(''), 2000);
+    setTimeout(() => setNotification(''), 2500);
   };
 
   const syncLens = async (e) => {
     if(e) e.preventDefault(); 
     try {
-      // High-performance constraints for mobile
       const constraints = {
-        video: { 
-          facingMode: "user",
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 30 }
-        }, 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
+        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, 
+        audio: true
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
       if (videoRef.current) {
-        // MOBILE HIJACK PREVENTION:
-        // 1. We create a video-only preview stream to stop iOS from triggering a "Live Call" overlay
+        // Prevent iOS full-screen hijack
         const previewStream = new MediaStream([stream.getVideoTracks()[0]]);
-        
         videoRef.current.srcObject = previewStream;
-        
-        // 2. Strict inline attributes to keep it inside the DIV
         videoRef.current.setAttribute('playsinline', '');
-        videoRef.current.setAttribute('webkit-playsinline', '');
         videoRef.current.muted = true; 
-        videoRef.current.defaultMuted = true;
-        
-        // 3. Play immediately
         await videoRef.current.play();
-        
         setStreamActive(true);
         showNotify("LENS_SYNCED");
       }
     } catch (err) {
-      console.error(err);
       showNotify("SIGNAL_BLOCKED");
     }
   };
 
   const takeSnapshot = async () => {
-    if (!streamActive || !videoRef.current) return;
+    if (!streamActive || !videoRef.current || !user) return;
     const canvas = document.createElement('canvas');
     canvas.width = videoRef.current.videoWidth;
     canvas.height = videoRef.current.videoHeight;
     const ctx = canvas.getContext('2d');
-    ctx.filter = 'grayscale(100%) contrast(1.2)';
+    // Apply KOF Arcade filter (high contrast/mono)
+    ctx.filter = 'grayscale(100%) contrast(1.5) brightness(1.1)';
     ctx.drawImage(videoRef.current, 0, 0);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
     
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
     await updateDoc(userDocRef, {
@@ -147,14 +146,11 @@ export default function App() {
   };
 
   const startRec = () => {
-    if (!streamActive || !streamRef.current) return;
+    if (!streamActive || !streamRef.current || !user) return;
     try {
       chunksRef.current = [];
-      // Use the full stream (including audio) for recording only
       mediaRecorderRef.current = new MediaRecorder(streamRef.current);
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+      mediaRecorderRef.current.ondataavailable = (e) => chunksRef.current.push(e.data);
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         const reader = new FileReader();
@@ -170,10 +166,8 @@ export default function App() {
       mediaRecorderRef.current.start();
       showNotify("REC_START");
       setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-        }
-      }, 5000);
+        if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
+      }, 4000);
     } catch (err) {
       showNotify("REC_FAILED");
     }
@@ -182,117 +176,123 @@ export default function App() {
   const mineCR = async () => {
     if (!user) return;
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
-    await updateDoc(userDocRef, { balance: profile.balance + 0.5 });
-    showNotify("+0.50 CR MINED");
+    await updateDoc(userDocRef, { balance: profile.balance + 1.0 });
+    showNotify("+1.00 CREDIT");
   };
 
-  // --- STYLES ---
+  // --- UI CLASSES (NEO GEO / KOF 2002 AESTHETIC) ---
   const neoBox = "border-4 border-black bg-white shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] mb-4 overflow-hidden";
-  const pixelBtn = "border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-['Press_Start_2P'] text-[9px] p-2 text-center cursor-pointer uppercase select-none flex items-center justify-center";
+  const pixelBtn = "border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[0px_0px_0px_0px] font-['Press_Start_2P'] text-[9px] p-3 text-center cursor-pointer uppercase select-none transition-all";
 
   return (
-    <div className="fixed inset-0 bg-gray-300 p-3 font-mono flex flex-col items-center overflow-hidden select-none">
+    <div className="fixed inset-0 bg-zinc-800 p-4 font-mono flex flex-col items-center overflow-hidden">
+      {/* Font Injection for Arcade Look */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        .arcade-font { font-family: 'Press_Start_2P', cursive; }
+        ::-webkit-scrollbar { display: none; }
+      `}</style>
       
-      {/* HEADER */}
-      <div className="w-full max-w-[440px] bg-black text-white p-2 mb-2 text-[7px] font-['Press_Start_2P'] flex justify-between items-center z-50 shrink-0">
-        <span className="opacity-50">GRID_UID:</span>
-        <span className="truncate ml-2">{user ? user.uid : "CONNECTING..."}</span>
+      {/* HEADER BAR */}
+      <div className="w-full max-w-md bg-black text-white p-2 mb-4 border-b-2 border-zinc-600 flex justify-between items-center z-50 arcade-font text-[7px]">
+        <span className="text-yellow-400">1P_INSERT_COIN</span>
+        <span className="truncate ml-4 opacity-70">UID: {user?.uid.slice(0,8) || "..."}</span>
       </div>
 
-      <div className="w-full max-w-[440px] flex-1 flex flex-col relative overflow-hidden">
+      <div className="w-full max-w-md flex-1 flex flex-col relative overflow-hidden">
         
+        {/* NOTIFICATIONS */}
         {notification && (
-          <div className="fixed top-12 left-1/2 -translate-x-1/2 z-[100] bg-yellow-400 border-4 border-black p-2 font-['Press_Start_2P'] text-[8px] shadow-[4px_4px_0px_black] w-[80%] text-center">
+          <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[100] bg-fuchsia-500 text-white border-4 border-black p-3 arcade-font text-[8px] shadow-[4px_4px_0px_black] w-3/4 text-center animate-bounce">
             {notification}
           </div>
         )}
 
         {currentPage === 'auth' ? (
-          <div className="space-y-4 pt-10">
-            <div className={`${neoBox} bg-[#0056b3] text-white p-8 text-center`}>
-              <h1 className="text-xl font-['Press_Start_2P'] uppercase">IRL_GRID</h1>
+          <div className="space-y-6 pt-12">
+            <div className={`${neoBox} bg-gradient-to-br from-blue-700 to-indigo-900 text-white p-10 text-center relative`}>
+              <div className="absolute top-2 right-2 w-4 h-4 bg-red-500 rounded-full animate-ping" />
+              <h1 className="text-2xl arcade-font leading-relaxed tracking-tighter italic">IRL_GRID<br/>VER.2002</h1>
             </div>
-            <div className={`${neoBox} bg-zinc-900 p-6 text-[#39ff14] font-['Press_Start_2P']`}>
-              <div className="w-full h-3 bg-black border-2 border-zinc-700 relative overflow-hidden mb-4">
-                <div className="h-full bg-[#39ff14] transition-all duration-100" style={{ width: `${bootStatus}%` }} />
+            
+            <div className={`${neoBox} bg-zinc-900 p-6 arcade-font`}>
+              <div className="text-[10px] text-zinc-400 mb-2">SYSTEM_CHECK...</div>
+              <div className="w-full h-4 bg-black border-2 border-zinc-700 relative overflow-hidden mb-4">
+                <div className="h-full bg-green-400 transition-all duration-150" style={{ width: `${bootStatus}%` }} />
               </div>
-              <div className="text-[8px] text-center">{isBooting ? 'UPLINKING...' : 'READY_FOR_BOOT'}</div>
+              <div className="text-[8px] text-green-400 text-center">{isBooting ? 'UPLINKING_DATA...' : 'WAITING_FOR_PLAYER'}</div>
             </div>
-            <button onClick={handleBoot} disabled={isBooting} className={`${pixelBtn} w-full py-5 text-xs`}>
-              {isBooting ? 'BOOTING...' : 'INITIATE_UPLINK'}
+
+            <button onClick={handleBoot} disabled={isBooting} className={`${pixelBtn} w-full py-6 text-xs bg-yellow-400 hover:bg-yellow-300`}>
+              {isBooting ? 'BOOTING...' : 'PUSH_START_BUTTON'}
             </button>
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="grid grid-cols-3 gap-2 mb-2 shrink-0">
-              <button onClick={() => setCurrentPage('discover')} className={`${pixelBtn} ${currentPage === 'discover' ? 'bg-[#39ff14]' : ''}`}>FEED</button>
-              <button onClick={() => setCurrentPage('channel')} className={`${pixelBtn} ${currentPage === 'channel' ? 'bg-[#39ff14]' : ''}`}>UPLINK</button>
-              <button onClick={() => setCurrentPage('profile')} className={`${pixelBtn} ${currentPage === 'profile' ? 'bg-[#39ff14]' : ''}`}>ARCHIVE</button>
-            </div>
-            <div className="grid grid-cols-2 gap-2 mb-4 shrink-0">
-               <button onClick={() => setCurrentPage('ads')} className={`${pixelBtn} ${currentPage === 'ads' ? 'bg-[#ff00ff] text-white' : ''}`}>WALLET</button>
-               <button onClick={() => window.location.reload()} className={pixelBtn}>LOGOUT</button>
+            {/* NAVIGATION TABS */}
+            <div className="grid grid-cols-3 gap-2 mb-3 shrink-0">
+              <button onClick={() => setCurrentPage('discover')} className={`${pixelBtn} ${currentPage === 'discover' ? 'bg-green-400' : 'bg-white'}`}>FEEDS</button>
+              <button onClick={() => setCurrentPage('channel')} className={`${pixelBtn} ${currentPage === 'channel' ? 'bg-green-400' : 'bg-white'}`}>LENS</button>
+              <button onClick={() => setCurrentPage('profile')} className={`${pixelBtn} ${currentPage === 'profile' ? 'bg-green-400' : 'bg-white'}`}>FILES</button>
             </div>
 
+            {/* MAIN CONTENT AREA */}
             <div className="flex-1 overflow-hidden">
                 {currentPage === 'discover' && (
-                <div className={`${neoBox} bg-black h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide`}>
+                <div className={`${neoBox} bg-black h-full overflow-y-scroll snap-y snap-mandatory border-none`}>
                     <div className="snap-start h-full flex items-center justify-center flex-col p-6 text-center">
-                      <div className="text-[#39ff14] font-['Press_Start_2P'] text-xs mb-4 animate-pulse">BROADCAST_ACTIVE</div>
+                      <div className="text-green-400 arcade-font text-[10px] mb-4 animate-pulse">SEARCHING_FOR_SIGNALS...</div>
+                      <div className="text-zinc-600 text-[8px] arcade-font">SCROLL_DOWN_TO_VIEW_ARCHIVE</div>
                     </div>
-                    {profile.archive.slice(-5).reverse().map((item) => (
-                    <div key={item.id} className="snap-start h-full relative group bg-zinc-900 border-b-2 border-zinc-800">
+                    {profile.archive.slice(-10).reverse().map((item) => (
+                    <div key={item.id} className="snap-start h-full relative group bg-zinc-900 border-b-4 border-black">
                         {item.type === 'video' ? 
-                        <video src={item.url} autoPlay muted loop playsInline className="w-full h-full object-cover grayscale opacity-60" /> :
-                        <img src={item.url} className="w-full h-full object-cover grayscale opacity-60" />
+                        <video src={item.url} autoPlay muted loop playsInline className="w-full h-full object-cover grayscale opacity-80" /> :
+                        <img src={item.url} className="w-full h-full object-cover grayscale opacity-80" />
                         }
+                        <div className="absolute bottom-4 left-4 arcade-font text-[8px] text-white bg-black/50 p-1">FRAME_ID_{item.id.toString().slice(-4)}</div>
                     </div>
                     ))}
                 </div>
                 )}
 
                 {currentPage === 'channel' && (
-                <div className={`${neoBox} h-full flex flex-col`}>
-                    <div className="p-3 flex-1 flex flex-col min-h-0">
-                    <div className="flex-1 bg-black border-4 border-black relative overflow-hidden mb-3 flex items-center justify-center">
+                <div className={`${neoBox} h-full flex flex-col p-3 bg-zinc-100`}>
+                    <div className="flex-1 bg-black border-4 border-black relative overflow-hidden mb-4 flex items-center justify-center">
                         <video 
                             ref={videoRef} 
                             autoPlay 
                             playsInline 
                             muted 
-                            controls={false}
-                            className={`w-full h-full object-cover grayscale pointer-events-none ${!streamActive ? 'hidden' : ''}`} 
+                            className={`w-full h-full object-cover grayscale-0 brightness-110 contrast-125 ${!streamActive ? 'hidden' : ''}`} 
                         />
-                        {!streamActive && <div className="text-[#39ff14] font-['Press_Start_2P'] text-[7px] animate-pulse text-center">SIGNAL_OFF</div>}
+                        {!streamActive && <div className="text-green-400 arcade-font text-[8px] animate-pulse text-center">LENS_DISCONNECTED<br/><br/>PRESS_SYNC</div>}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-2 mb-2 shrink-0">
-                        <button onClick={syncLens} className={`${pixelBtn} bg-blue-600 text-white`}>SYNC_LENS</button>
-                        <button onClick={() => setIsLive(!isLive)} className={`${pixelBtn} ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-green-500'}`}>{isLive ? 'END_LIVE' : 'GO_LIVE'}</button>
+                    <div className="grid grid-cols-2 gap-3 mb-3 shrink-0">
+                        <button onClick={syncLens} className={`${pixelBtn} bg-blue-500 text-white`}>SYNC</button>
+                        <button onClick={() => setIsLive(!isLive)} className={`${pixelBtn} ${isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-zinc-300'}`}>{isLive ? 'LIVE' : 'STANDBY'}</button>
                     </div>
                     <div className="grid grid-cols-3 gap-2 shrink-0">
-                        <button onClick={startRec} className={`${pixelBtn} bg-red-500 text-white`}>REC</button>
+                        <button onClick={startRec} className={`${pixelBtn} bg-red-600 text-white`}>REC</button>
                         <button onClick={takeSnapshot} className={`${pixelBtn} bg-yellow-400`}>SNAP</button>
-                        <button onClick={mineCR} className={`${pixelBtn} bg-fuchsia-500 text-white`}>MINE_CR</button>
+                        <button onClick={mineCR} className={`${pixelBtn} bg-green-500 text-white`}>MINE</button>
                     </div>
-                    </div>
-                </div>
-                )}
-
-                {currentPage === 'ads' && (
-                <div className={`${neoBox} h-full flex flex-col items-center justify-center text-center p-6`}>
-                    <div className="text-2xl font-['Press_Start_2P'] mb-4">{profile.balance.toFixed(2)} CR</div>
                 </div>
                 )}
 
                 {currentPage === 'profile' && (
-                <div className={`${neoBox} h-full flex flex-col`}>
-                    <div className="p-3 grid grid-cols-1 gap-4 overflow-y-auto flex-1">
+                <div className={`${neoBox} h-full bg-zinc-900 flex flex-col p-2`}>
+                    <div className="flex justify-between items-center mb-4 p-2 bg-black text-white arcade-font text-[8px]">
+                      <span>WALLET: {profile.balance.toFixed(2)} CR</span>
+                      <span>FILES: {profile.archive.length}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 overflow-y-auto flex-1">
                     {profile.archive.slice().reverse().map((item) => (
-                        <div key={item.id} className="border-4 border-black p-1 bg-black shrink-0">
+                        <div key={item.id} className="border-2 border-black p-1 bg-zinc-800 aspect-square overflow-hidden hover:border-yellow-400 transition-colors">
                             {item.type === 'video' ? 
-                            <video src={item.url} controls playsInline className="w-full grayscale" /> :
-                            <img src={item.url} className="w-full grayscale" />
+                            <video src={item.url} controls playsInline className="w-full h-full object-cover grayscale" /> :
+                            <img src={item.url} className="w-full h-full object-cover grayscale" />
                             }
                         </div>
                     ))}
@@ -300,11 +300,15 @@ export default function App() {
                 </div>
                 )}
             </div>
+
+            {/* FOOTER BAR */}
+            <div className="mt-2 text-[6px] arcade-font text-zinc-500 flex justify-between uppercase">
+              <span>System_OK</span>
+              <span>Grid_Unified_OS_V2</span>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-
