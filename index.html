@@ -2,491 +2,545 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>INREALLIFE // NEO-GEO UPLINK</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
     <style>
         :root {
+            /* NEO GEO OFFICIAL PALETTE */
             --neo-blue: #0056b3;
-            --neo-yellow: #facc15;
             --neo-red: #ef4444;
             --neo-green: #39ff14;
-            --neo-magenta: #ff00ff;
+            --neo-yellow: #facc15;
+            --neo-orange: #f97316;
             
-            /* Dark Mode Defaults */
             --bg-color: #0a0a0a;
-            --text-color: #39ff14;
+            --text-color: var(--neo-green);
             --box-bg: rgba(0, 0, 0, 0.9);
-            --grid-opacity: 0.1;
+            --border-color: var(--neo-blue);
+            --scanline-opacity: 0.15;
         }
 
-        /* Light Mode / Service Mode */
-        body.light-mode {
-            --bg-color: #e5e7eb; 
-            --text-color: #1e3a8a; 
-            --box-bg: rgba(255, 255, 255, 0.95);
-            --grid-opacity: 0.2;
-            --neo-green: #1e40af; 
+        [data-theme='light'] {
+            --bg-color: #e2e8f0;
+            --text-color: #1e293b;
+            --box-bg: #f1f5f9;
+            --border-color: var(--neo-blue);
+            --scanline-opacity: 0.05;
         }
 
         body {
             background-color: var(--bg-color);
-            background-image: radial-gradient(rgba(57, 255, 20, var(--grid-opacity)) 1px, transparent 1px);
-            background-size: 20px 20px;
+            background-image: 
+                linear-gradient(var(--bg-color) 0%, transparent 100%),
+                radial-gradient(rgba(0, 86, 179, 0.15) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px;
             color: var(--text-color);
             font-family: 'Courier Prime', monospace;
             overflow-x: hidden;
-            transition: background-color 0.3s, color 0.3s;
+            margin: 0;
+            touch-action: none;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .neo-box {
-            border: 4px solid var(--text-color);
-            box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 0.2);
+            border: 4px solid var(--border-color);
+            box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 0.5);
             background: var(--box-bg);
-            transition: border-color 0.3s, background 0.3s;
+            position: relative;
+        }
+
+        /* Decorative Corners */
+        .neo-box::before {
+            content: '';
+            position: absolute;
+            top: -4px; right: -4px;
+            width: 20px; height: 20px;
+            border-top: 4px solid var(--neo-red);
+            border-right: 4px solid var(--neo-red);
+            pointer-events: none;
+        }
+
+        @keyframes rainbow-flash {
+            0% { border-color: var(--neo-red); box-shadow: 0 0 15px var(--neo-red); }
+            25% { border-color: var(--neo-yellow); box-shadow: 0 0 15px var(--neo-yellow); }
+            50% { border-color: var(--neo-green); box-shadow: 0 0 15px var(--neo-green); }
+            75% { border-color: var(--neo-blue); box-shadow: 0 0 15px var(--neo-blue); }
+            100% { border-color: var(--neo-red); box-shadow: 0 0 15px var(--neo-red); }
+        }
+
+        .rainbow-box {
+            border: 6px solid var(--neo-red);
+            padding: 20px;
+            display: inline-block;
+            animation: rainbow-flash 0.8s linear infinite;
+            background: black;
+        }
+
+        .rainbow-box-container {
+            border: 6px solid var(--neo-orange);
+            animation: rainbow-flash 1s linear infinite;
+            background: var(--box-bg);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .rainbow-box-container.drag-over {
+            background: rgba(249, 115, 22, 0.2) !important;
+            transform: scale(1.05);
         }
 
         .pixel-btn {
-            border: 2px solid var(--text-color);
+            border: 2px solid var(--border-color);
             font-family: 'Press Start 2P', cursive;
             text-transform: uppercase;
             transition: all 0.1s;
             cursor: pointer;
-            position: relative;
             background: transparent;
             color: var(--text-color);
+            box-shadow: 3px 3px 0px rgba(0,0,0,0.3);
         }
 
-        .pixel-btn:active {
-            transform: translate(2px, 2px);
-            box-shadow: none;
-        }
-
-        .pixel-btn:hover:not(:disabled) {
-            filter: brightness(1.2);
-            transform: translateY(-1px);
-        }
+        .pixel-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+        .pixel-btn-blue { border-color: var(--neo-blue); color: var(--neo-blue); }
+        .pixel-btn-red { border-color: var(--neo-red); color: var(--neo-red); }
+        .pixel-btn-green { border-color: var(--neo-green); color: var(--neo-green); }
+        .pixel-btn-yellow { border-color: var(--neo-yellow); color: var(--neo-yellow); }
+        .pixel-btn-orange { border-color: var(--neo-orange); color: var(--neo-orange); }
 
         .scanlines {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-            z-index: 9999;
-        }
-
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .animate-blink { animation: blink 1s infinite; }
-
-        .crt-flicker {
-            animation: flicker 0.15s infinite;
-        }
-
-        @keyframes flicker {
-            0% { opacity: 0.98; }
-            50% { opacity: 1; }
-            100% { opacity: 0.99; }
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, var(--scanline-opacity)) 50%);
+            background-size: 100% 4px;
+            pointer-events: none; z-index: 9999;
         }
 
         .kof-header {
             font-family: 'Press Start 2P', cursive;
             color: var(--neo-yellow);
-            text-shadow: 4px 4px var(--neo-red);
+            text-shadow: 4px 4px var(--neo-red), -1px -1px 0 #000;
+            margin: 0;
         }
 
-        .theme-toggle-container {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 10000;
-        }
-
-        .stats-text {
-            font-family: 'Press Start 2P', cursive;
-            font-size: 8px;
-        }
-
-        /* Custom Colors for KOF buttons */
-        .btn-green { background-color: #15803d; color: white; border-color: #22c55e; }
-        .btn-red { background-color: #b91c1c; color: white; border-color: #ef4444; }
-        .btn-purple { background-color: #7e22ce; color: white; border-color: #a855f7; }
-        .btn-yellow { background-color: #a16207; color: white; border-color: #eab308; }
-        .btn-white { background-color: #f3f4f6; color: #111827; border-color: #9ca3af; }
-        .btn-blue { background-color: #1e3a8a; color: white; border-color: #3b82f6; }
+        .stats-text { font-family: 'Press Start 2P', cursive; font-size: 9px; }
 
         .video-container {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            background: #000;
-            overflow: hidden;
-            border: 4px solid var(--text-color);
+            position: relative; width: 100%; aspect-ratio: 16 / 9;
+            background: #000; border: 4px solid var(--neo-blue);
         }
 
-        .video-feed {
+        .avatar-frame {
+            border: 4px solid var(--neo-yellow); padding: 4px; background: #000;
+            width: 100px; height: 100px; overflow: hidden;
+            box-shadow: 0 0 10px var(--neo-yellow);
+        }
+
+        .lifebar { height: 14px; width: 150px; background: #111; border: 2px solid #fff; position: relative; overflow: hidden; }
+        .lifebar-fill { 
+            height: 100%; 
+            background: linear-gradient(to right, var(--neo-red), var(--neo-orange), var(--neo-yellow), var(--neo-green)); 
+            transition: width 0.5s ease; 
+        }
+
+        .toast-notification {
+            position: fixed; bottom: 2rem; right: 2rem; z-index: 10000;
+            background: var(--neo-blue); color: white; border: 4px solid var(--neo-yellow);
+            padding: 1rem; font-family: 'Press Start 2P', cursive; font-size: 8px;
+            box-shadow: 8px 8px 0 var(--neo-red);
+        }
+
+        .floppy-disk {
+            width: 85px;
+            height: 85px;
+            background-color: #2a2a2a;
+            position: relative;
+            border-radius: 2px;
+            border-top-right-radius: 12px;
+            border: 2px solid #444;
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            z-index: 500;
+            box-shadow: 6px 6px 0 rgba(0,0,0,0.6);
+        }
+        .floppy-disk::before {
+            content: "";
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover; 
-            transform: scaleX(-1); 
+            top: 6px; left: 16px; right: 16px; height: 32px;
+            background: var(--neo-orange);
+            border: 1px solid #000;
         }
 
-        .active-glow {
-            box-shadow: inset 0 0 40px rgba(57, 255, 20, 0.15), 0 0 20px rgba(57, 255, 20, 0.1);
+        .live-tag {
+            position: absolute; top: 8px; left: 8px; background: var(--neo-red);
+            color: white; font-size: 8px; padding: 4px 6px; font-family: 'Press Start 2P', cursive;
+            box-shadow: 2px 2px 0 #000;
         }
 
-        /* Archive Grid Styles */
-        .archive-item {
-            position: relative;
-            background: #000;
-            border: 2px solid var(--text-color);
-            aspect-ratio: 1 / 1;
-            overflow: hidden;
-        }
-        .archive-item img, .archive-item video {
+        .pixel-input {
+            background: rgba(0,0,0,0.5);
+            border: 2px solid var(--neo-green);
+            color: var(--neo-green);
+            padding: 12px;
+            font-family: 'Courier Prime', monospace;
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: grayscale(100%);
-            transition: filter 0.2s;
+            outline: none;
         }
-        .archive-item:hover img, .archive-item:hover video {
-            filter: grayscale(0%);
+
+        .nav-active {
+            background: var(--neo-yellow) !important;
+            color: #000 !important;
+            border-color: #000 !important;
         }
     </style>
 </head>
-<body>
+<body data-theme="dark">
     <div id="root"></div>
     <div class="scanlines"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-uplink';
 
         function App() {
-            const [theme, setTheme] = useState('dark');
+            const [user, setUser] = useState(null);
             const [view, setView] = useState('auth');
+            const [theme, setTheme] = useState('dark');
             const [isBooting, setIsBooting] = useState(false);
             const [bootProgress, setBootProgress] = useState(0);
-            const [statusMsg, setStatusMsg] = useState('IDLE');
-            const [lensSynced, setLensSynced] = useState(false);
-            const [streamActive, setStreamActive] = useState(false);
-            const [isRecording, setIsRecording] = useState(false);
-            const [recordTime, setRecordTime] = useState(5);
-            const [archive, setArchive] = useState([]);
-            const [viewers, setViewers] = useState(0);
+            const [toast, setToast] = useState(null);
             
-            const videoRef = useRef(null);
-            const streamRef = useRef(null);
-            const mediaRecorderRef = useRef(null);
-            const chunksRef = useRef([]);
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+            const [isOverTarget, setIsOverTarget] = useState(false);
+            
+            const floppyRef = useRef(null);
+            const targetRef = useRef(null);
+            const dragOffset = useRef({ x: 0, y: 0 });
+
+            const [profile, setProfile] = useState({
+                username: "PLAYER_01",
+                credits: 2002,
+                location: "OSAKA_STATION",
+                avatar: "https://api.dicebear.com/7.x/pixel-art/svg?seed=KOF"
+            });
+
+            const liveUplinks = useMemo(() => [
+                { id: 'u1', name: 'TERRY_BOGARD', viewers: 1204, thumb: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Terry', color: 'blue' },
+                { id: 'u2', name: 'MAI_SHIRANUI', viewers: 852, thumb: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Mai', color: 'red' },
+                { id: 'u3', name: 'IORI_YAGAMI', viewers: 2301, thumb: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=Iori', color: 'orange' },
+                { id: 'u4', name: 'K_DASH', viewers: 542, thumb: 'https://api.dicebear.com/7.x/pixel-art/svg?seed=K', color: 'green' }
+            ], []);
+
+            useEffect(() => {
+                document.body.setAttribute('data-theme', theme);
+            }, [theme]);
+
+            useEffect(() => {
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+                };
+                initAuth();
+                const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
+                return () => unsubscribe();
+            }, []);
 
             const toggleTheme = () => {
                 const newTheme = theme === 'dark' ? 'light' : 'dark';
                 setTheme(newTheme);
-                if (newTheme === 'light') {
-                    document.body.classList.add('light-mode');
-                } else {
-                    document.body.classList.remove('light-mode');
-                }
+                showToast(`THEME_SET: ${newTheme.toUpperCase()}`);
             };
 
-            const handleBoot = () => {
+            const showToast = (msg) => {
+                setToast(msg);
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            const startBootSequence = () => {
                 setIsBooting(true);
-                let progress = 0;
+                setBootProgress(0);
+                let current = 0;
                 const interval = setInterval(() => {
-                    progress += Math.random() * 25;
-                    if (progress >= 100) {
-                        setBootProgress(100);
+                    current += Math.random() * 15;
+                    if (current >= 100) {
                         clearInterval(interval);
+                        setBootProgress(100);
                         setTimeout(() => {
                             setView('discover');
                             setIsBooting(false);
-                        }, 600);
+                        }, 800);
+                    } else {
+                        setBootProgress(current);
                     }
-                    setBootProgress(Math.min(progress, 100));
-                }, 100);
+                }, 80);
             };
 
-            const syncLens = async () => {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    streamRef.current = stream;
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        setLensSynced(true);
-                        setStatusMsg('LENS_LOCKED');
-                    }
-                } catch (err) {
-                    setStatusMsg('SIGNAL_ERROR');
+            const handleStart = (e) => {
+                if (isBooting) return;
+                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                const rect = floppyRef.current.getBoundingClientRect();
+                dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+                setIsDragging(true);
+                setDragPos({ x: rect.left, y: rect.top });
+            };
+
+            const handleMove = (e) => {
+                if (!isDragging) return;
+                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                setDragPos({ x: clientX - dragOffset.current.x, y: clientY - dragOffset.current.y });
+                if (targetRef.current) {
+                    const t = targetRef.current.getBoundingClientRect();
+                    const isInside = (clientX > t.left && clientX < t.right && clientY > t.top && clientY < t.bottom);
+                    setIsOverTarget(isInside);
                 }
             };
 
-            const goLive = () => {
-                if (!lensSynced) return;
-                setStreamActive(true);
-                setStatusMsg('BROADCASTING');
-                setViewers(Math.floor(Math.random() * 150) + 50);
-            };
-
-            const stopAll = () => {
-                if (streamRef.current) {
-                    streamRef.current.getTracks().forEach(track => track.stop());
-                    streamRef.current = null;
+            const handleEnd = () => {
+                if (!isDragging) return;
+                setIsDragging(false);
+                if (isOverTarget) {
+                    showToast("BOOT_INITIALIZED");
+                    startBootSequence();
+                } else {
+                    setDragPos({ x: 0, y: 0 });
                 }
-                if (videoRef.current) {
-                    videoRef.current.srcObject = null;
+                setIsOverTarget(false);
+            };
+
+            useEffect(() => {
+                if (isDragging) {
+                    window.addEventListener('mousemove', handleMove);
+                    window.addEventListener('mouseup', handleEnd);
+                    window.addEventListener('touchmove', handleMove, { passive: false });
+                    window.addEventListener('touchend', handleEnd);
                 }
-                setStreamActive(false);
-                setLensSynced(false);
-                setIsRecording(false);
-                setStatusMsg('SIGNAL_TERMINATED');
-                setViewers(0);
-            };
-
-            const endLiveOnly = () => {
-                setStreamActive(false);
-                setStatusMsg('LENS_LOCKED');
-                setViewers(0);
-            };
-
-            const start5SecRecord = () => {
-                if (!lensSynced || isRecording) return;
-                
-                setIsRecording(true);
-                setRecordTime(5);
-                setStatusMsg('BUFFERING_VIDEO');
-                chunksRef.current = [];
-
-                const recorder = new MediaRecorder(streamRef.current);
-                mediaRecorderRef.current = recorder;
-
-                recorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) chunksRef.current.push(e.data);
+                return () => {
+                    window.removeEventListener('mousemove', handleMove);
+                    window.removeEventListener('mouseup', handleEnd);
+                    window.removeEventListener('touchmove', handleMove);
+                    window.removeEventListener('touchend', handleEnd);
                 };
-
-                recorder.onstop = () => {
-                    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                    const url = URL.createObjectURL(blob);
-                    setArchive(prev => [{ id: Date.now(), url, type: 'video' }, ...prev]);
-                    setIsRecording(false);
-                    setStatusMsg(streamActive ? 'BROADCASTING' : 'LENS_LOCKED');
-                };
-
-                recorder.start();
-
-                const timer = setInterval(() => {
-                    setRecordTime(prev => {
-                        if (prev <= 1) {
-                            clearInterval(timer);
-                            recorder.stop();
-                            return 0;
-                        }
-                        return prev - 1;
-                    });
-                }, 1000);
-            };
-
-            const takeSnapshot = () => {
-                if (!lensSynced || !videoRef.current) return;
-                const canvas = document.createElement('canvas');
-                canvas.width = videoRef.current.videoWidth;
-                canvas.height = videoRef.current.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.translate(canvas.width, 0);
-                ctx.scale(-1, 1); 
-                ctx.drawImage(videoRef.current, 0, 0);
-                const url = canvas.toDataURL('image/png');
-                setArchive(prev => [{ id: Date.now(), url, type: 'image' }, ...prev]);
-                setStatusMsg('CAP_SAVED');
-                setTimeout(() => setStatusMsg(streamActive ? 'BROADCASTING' : 'LENS_LOCKED'), 1000);
-            };
+            }, [isDragging, isOverTarget]);
 
             return (
-                <div className="min-h-screen p-4 md:p-8 crt-flicker">
-                    <div className="theme-toggle-container">
-                        <button onClick={toggleTheme} className="pixel-btn p-2 text-[8px]">
-                            {theme === 'dark' ? 'SERVICE_MODE' : 'ARCADE_MODE'}
-                        </button>
-                    </div>
-
-                    {view !== 'auth' && (
-                        <div className="flex flex-wrap gap-4 mb-8 neo-box p-4 items-center justify-between border-b-8">
-                            <div className="flex gap-4">
-                                <button onClick={() => setView('discover')} className={`pixel-btn p-2 text-[10px] ${view === 'discover' ? 'bg-current !text-inherit' : ''}`} style={{color: view === 'discover' ? 'var(--bg-color)' : 'var(--text-color)', backgroundColor: view === 'discover' ? 'var(--text-color)' : 'transparent'}}>DISCOVER</button>
-                                <button onClick={() => setView('channel')} className={`pixel-btn p-2 text-[10px] ${view === 'channel' ? 'bg-current !text-inherit' : ''}`} style={{color: view === 'channel' ? 'var(--bg-color)' : 'var(--text-color)', backgroundColor: view === 'channel' ? 'var(--text-color)' : 'transparent'}}>MY CHANNEL</button>
-                                <button onClick={() => setView('profile')} className={`pixel-btn p-2 text-[10px] ${view === 'profile' ? 'bg-current !text-inherit' : ''}`} style={{color: view === 'profile' ? 'var(--bg-color)' : 'var(--text-color)', backgroundColor: view === 'profile' ? 'var(--text-color)' : 'transparent'}}>MY ARCHIVE</button>
-                            </div>
-                            <button onClick={() => window.location.reload()} className="pixel-btn p-2 text-[10px] bg-red-600 text-white border-red-900 hover:bg-red-500">LOGOUT</button>
-                        </div>
-                    )}
+                <div className="min-h-screen p-4 md:p-10 max-w-7xl mx-auto select-none">
+                    {toast && <div className="toast-notification">{toast}</div>}
 
                     {view === 'auth' && (
-                        <div className="max-w-2xl mx-auto mt-20 text-center">
-                            <h1 className="kof-header text-5xl mb-4 italic">INREALLIFE</h1>
-                            <div className="neo-box p-8 text-left space-y-4">
-                                <p className="text-xl">NO COOKIES. NO MASTERS.</p>
-                                <p className="opacity-70">UPLINK_STATUS: {isBooting ? 'CONNECTING...' : 'READY'}</p>
+                        <div className="max-w-md mx-auto mt-16 text-center flex flex-col items-center">
+                            <div className="rainbow-box mb-12">
+                                <h1 className="kof-header text-4xl italic tracking-tighter">INREALLIFE</h1>
+                            </div>
+                            
+                            <div 
+                                ref={floppyRef}
+                                onMouseDown={handleStart}
+                                onTouchStart={handleStart}
+                                className="floppy-disk"
+                                style={{ 
+                                    position: isDragging ? 'fixed' : 'relative',
+                                    left: isDragging ? dragPos.x : 0,
+                                    top: isDragging ? dragPos.y : 0,
+                                    opacity: isBooting ? 0 : 1,
+                                    zIndex: 500,
+                                    pointerEvents: isBooting ? 'none' : 'auto'
+                                }}
+                            >
+                                <div className="absolute bottom-2 left-2 right-2 h-8 bg-white border border-black flex items-center justify-center">
+                                    <div className="stats-text text-[6px] text-black">UPLINK_DISK_01</div>
+                                </div>
+                                {!isDragging && !isBooting && (
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 stats-text text-[7px] animate-bounce text-white">
+                                        INSERT_COIN
+                                    </div>
+                                )}
+                            </div>
+
+                            <div 
+                                ref={targetRef}
+                                className={`rainbow-box-container p-10 mt-12 w-full space-y-6 ${isOverTarget ? 'drag-over' : ''}`}
+                            >
+                                <p className="stats-text text-lg italic text-[var(--neo-yellow)]">MVS SYSTEM_START</p>
+                                
                                 {isBooting ? (
-                                    <div className="w-full bg-zinc-800 h-8 border-2 border-current">
-                                        <div className="h-full" style={{ width: `${bootProgress}%`, backgroundColor: 'var(--text-color)' }}></div>
+                                    <div className="w-full bg-zinc-900 h-10 border-4 border-white p-1 overflow-hidden">
+                                        <div className="h-full bg-[var(--neo-green)] transition-all duration-75" style={{ width: `${bootProgress}%` }}></div>
+                                        <div className="stats-text text-[8px] mt-2 text-center text-white">PROCESING_ROM... {Math.round(bootProgress)}%</div>
                                     </div>
                                 ) : (
-                                    <button onClick={handleBoot} className="pixel-btn w-full p-4 text-xl bg-current !text-inherit" style={{backgroundColor: 'var(--text-color)', color: 'var(--bg-color)'}}>
-                                        START BROADCAST
-                                    </button>
+                                    <div className="border-4 border-dashed border-[var(--neo-blue)] p-8 opacity-80 flex flex-col items-center gap-2">
+                                        <div className="stats-text text-[10px] text-[var(--neo-blue)]">INSERT_CARTRIDGE_HERE</div>
+                                        <div className="stats-text text-[6px] text-[var(--neo-orange)]">DRAG TO BOOT INTERFACE</div>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {view === 'discover' && (
-                        <div className="max-w-4xl mx-auto">
-                            <h2 className="kof-header text-2xl mb-6 underline">WORLD_UPLINKS</h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {[1, 2, 3, 4].map(i => (
-                                    <div key={i} className="neo-box p-2 group overflow-hidden">
-                                        <div className="bg-zinc-900 aspect-video mb-2 flex items-center justify-center border-2 border-zinc-800">
-                                            <span className="text-zinc-700 font-bold italic">SIGNAL_LOST_{i}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center px-2">
-                                            <span className="text-xs">UPLINK_0{i}</span>
-                                            <span className="text-[10px] text-red-500 font-bold animate-pulse">● LIVE</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {view === 'channel' && (
-                        <div className="max-w-6xl mx-auto">
-                            <div className="flex flex-col lg:flex-row gap-6">
-                                <div className="flex-1">
-                                    <h2 className="kof-header text-2xl mb-4">MY_CHANNEL_01</h2>
-                                    <div className={`video-container ${lensSynced ? 'active-glow' : ''}`}>
-                                        <video ref={videoRef} autoPlay playsInline muted className="video-feed" />
-                                        
-                                        <div className="absolute top-6 left-6 pointer-events-none stats-text">
-                                            {streamActive && <div className="text-red-500 animate-pulse text-lg mb-2">● LIVE</div>}
-                                            {isRecording && (
-                                                <div className="text-white bg-red-600 px-2 py-1 text-[10px] inline-flex items-center gap-2 mb-2">
-                                                    <span className="animate-pulse">REC</span>
-                                                    <span>0:0{recordTime}</span>
-                                                </div>
-                                            )}
-                                            <div className="text-white text-[10px] bg-black/60 p-2 backdrop-blur-sm border-l-2 border-current">
-                                                STATUS: {lensSynced ? (streamActive ? 'BROADCASTING' : 'LENS_ACTIVE') : 'OFFLINE'}
-                                            </div>
-                                        </div>
-
-                                        <div className="absolute inset-0 pointer-events-none border-[12px] border-black/10"></div>
-                                        {!lensSynced && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/80">
-                                                <div className="stats-text text-zinc-500 animate-pulse uppercase">Waiting for lens sync...</div>
-                                            </div>
-                                        )}
-                                    </div>
+                    {view !== 'auth' && (
+                        <div className="space-y-6 animate-in fade-in duration-500">
+                            {/* MULTI-COLOR NAVIGATION */}
+                            <div className="neo-box p-4 flex flex-wrap gap-2 md:gap-4 items-center justify-between">
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    <button onClick={() => setView('discover')} className={`pixel-btn pixel-btn-blue px-4 py-3 text-[8px] md:text-[10px] ${view === 'discover' ? 'nav-active' : ''}`}>DISCOVER</button>
+                                    <button onClick={() => setView('channel')} className={`pixel-btn pixel-btn-red px-4 py-3 text-[8px] md:text-[10px] ${view === 'channel' ? 'nav-active' : ''}`}>CHANNEL</button>
+                                    <button onClick={() => setView('archive')} className={`pixel-btn pixel-btn-orange px-4 py-3 text-[8px] md:text-[10px] ${view === 'archive' ? 'nav-active' : ''}`}>ARCHIVE</button>
+                                    <button onClick={() => setView('profile')} className={`pixel-btn pixel-btn-green px-4 py-3 text-[8px] md:text-[10px] ${view === 'profile' ? 'nav-active' : ''}`}>PROFILE</button>
+                                    <button onClick={() => setView('settings')} className={`pixel-btn pixel-btn-yellow px-4 py-3 text-[8px] md:text-[10px] ${view === 'settings' ? 'nav-active' : ''}`}>SETTINGS</button>
                                     
-                                    <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
-                                        {!lensSynced ? (
-                                            <button onClick={syncLens} className="pixel-btn p-4 text-[9px] btn-blue">SYNC LENS</button>
-                                        ) : (
-                                            <button onClick={stopAll} className="pixel-btn p-4 text-[9px] btn-white">CUT ALL</button>
-                                        )}
-
-                                        {streamActive ? (
-                                            <button onClick={endLiveOnly} className="pixel-btn p-4 text-[9px] btn-white">END LIVE</button>
-                                        ) : (
-                                            <button 
-                                                onClick={goLive} 
-                                                disabled={!lensSynced}
-                                                className={`pixel-btn p-4 text-[9px] btn-green ${!lensSynced ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
-                                            >GO LIVE</button>
-                                        )}
-
-                                        <button 
-                                            onClick={start5SecRecord}
-                                            disabled={!lensSynced || isRecording}
-                                            className={`pixel-btn p-4 text-[9px] btn-red ${(!lensSynced || isRecording) ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
-                                        >
-                                            {isRecording ? 'SAVING...' : 'RECORD'}
-                                        </button>
-
-                                        <button 
-                                            onClick={takeSnapshot} 
-                                            disabled={!lensSynced}
-                                            className={`pixel-btn p-4 text-[9px] btn-yellow ${!lensSynced ? 'opacity-40 grayscale cursor-not-allowed' : ''}`}
-                                        >CAPTURE</button>
-
-                                        <button className="pixel-btn p-4 text-[9px] btn-purple">DONATE</button>
-                                    </div>
+                                    <button onClick={toggleTheme} className="pixel-btn pixel-btn-orange p-3 text-[12px] ml-2">
+                                        {theme === 'dark' ? '☼' : '☾'}
+                                    </button>
                                 </div>
-
-                                <div className="w-full lg:w-72 space-y-4">
-                                    <div className="neo-box p-4">
-                                        <h3 className="stats-text text-white mb-4 border-b border-current pb-2">CHANNEL_STATS</h3>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <div className="text-[10px] opacity-60">VIEWERS</div>
-                                                <div className="stats-text text-xl text-[#facc15]">{streamActive ? viewers : '---'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] opacity-60">BITRATE</div>
-                                                <div className="stats-text text-sm text-[#39ff14]">{lensSynced ? (isRecording || streamActive ? '4500 KBPS' : 'IDLE') : 'OFFLINE'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-[10px] opacity-60">LATENCY</div>
-                                                <div className="stats-text text-sm text-[#ef4444]">{streamActive ? '12ms' : '---'}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="neo-box p-4 stats-text text-[8px] leading-relaxed bg-black/40">
-                                        <div className="text-[#39ff14] mb-1">SYSTEM_LOG:</div>
-                                        <div>> UPLINK STATUS: {statusMsg}</div>
-                                        <div>> LENS SYNC: {lensSynced ? 'YES' : 'NO'}</div>
-                                        <div>> SECURITY: ENCRYPTED</div>
-                                        {isRecording && <div className="text-red-500 animate-pulse mt-2">> WRITING 5s BLOB...</div>}
-                                    </div>
+                                <div className="stats-text text-[var(--neo-yellow)] text-[10px] hidden sm:block bg-black p-2 border border-[var(--neo-yellow)]">
+                                    CREDITS: {profile.credits}
                                 </div>
                             </div>
-                        </div>
-                    )}
 
-                    {view === 'profile' && (
-                        <div className="max-w-4xl mx-auto">
-                            <h2 className="kof-header text-2xl mb-6">SAVED_DATA</h2>
-                            {archive.length === 0 ? (
-                                <div className="neo-box p-20 text-center opacity-50 uppercase">Empty Archive</div>
-                            ) : (
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    {archive.map(item => (
-                                        <div key={item.id} className="archive-item neo-box">
-                                            {item.type === 'image' ? (
-                                                <img src={item.url} alt="Capture" />
-                                            ) : (
-                                                <video src={item.url} controls muted loop />
-                                            )}
-                                            <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-[6px] p-1 stats-text text-center border-t border-current">
-                                                {item.type.toUpperCase()} // {new Date(item.id).toLocaleTimeString()}
+                            {/* DISCOVER VIEW */}
+                            {view === 'discover' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                    {liveUplinks.map(uplink => (
+                                        <div key={uplink.id} className="neo-box p-0 overflow-hidden group hover:scale-[1.02] transition-transform" style={{borderColor: `var(--neo-${uplink.color})`}}>
+                                            <div className="live-box-thumb">
+                                                <img src={uplink.thumb} className="pixelated" />
+                                                <div className="live-tag">LIVE</div>
+                                            </div>
+                                            <div className="p-4 flex flex-col gap-3">
+                                                <div className="stats-text text-[9px] truncate" style={{color: `var(--neo-${uplink.color})`}}>{uplink.name}</div>
+                                                <div className="stats-text text-[7px] opacity-70 uppercase">{uplink.viewers} WATCHERS</div>
+                                                <button onClick={() => setView('channel')} className={`pixel-btn pixel-btn-${uplink.color} w-full py-2 text-[8px]`}>CONNECT_LINK</button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
+
+                            {/* CHANNEL VIEW */}
+                            {view === 'channel' && (
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                    <div className="lg:col-span-2 space-y-6">
+                                        <div className="video-container neo-box" style={{borderColor: 'var(--neo-red)'}}>
+                                            <div className="absolute inset-0 flex items-center justify-center flex-col gap-4">
+                                                <div className="stats-text text-[var(--neo-orange)] animate-pulse text-lg">WAITING_FOR_UPLINK...</div>
+                                                <button onClick={() => showToast("SCANNING_SATELLITE...")} className="pixel-btn pixel-btn-blue px-6 py-3 text-[10px]">RESCAN_BAND</button>
+                                            </div>
+                                        </div>
+                                        <div className="neo-box p-6 flex justify-between items-center" style={{borderColor: 'var(--neo-blue)'}}>
+                                            <div>
+                                                <h2 className="kof-header text-xl">{profile.username}</h2>
+                                                <p className="stats-text text-[var(--neo-green)] text-[8px] mt-1">LATENCY: 12ms // BAND: MVS-99</p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-2">
+                                                <span className="stats-text text-[7px]">SIGNAL_STRENGTH</span>
+                                                <div className="lifebar"><div className="lifebar-fill" style={{width: '65%'}}></div></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="neo-box p-6 space-y-4" style={{borderColor: 'var(--neo-orange)'}}>
+                                        <h3 className="stats-text border-b border-zinc-700 pb-2 text-[var(--neo-orange)]">COMMS_LOG</h3>
+                                        <div className="h-64 overflow-y-auto space-y-3 stats-text text-[7px]">
+                                            <p><span className="text-[var(--neo-blue)]">[SYS]:</span> ENCRYPTED CHANNEL ESTABLISHED</p>
+                                            <p><span className="text-[var(--neo-red)]">IORI_Y:</span> ...HMPH. GET READY.</p>
+                                            <p><span className="text-[var(--neo-yellow)]">TERRY_B:</span> OKAY! COME ON!</p>
+                                            <p><span className="text-[var(--neo-green)]">MAI_S:</span> NIPPON ICHI!</p>
+                                        </div>
+                                        <input type="text" className="pixel-input text-[8px]" placeholder="SEND_DATA..." style={{borderColor: 'var(--neo-green)'}} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ARCHIVE VIEW */}
+                            {view === 'archive' && (
+                                <div className="space-y-6">
+                                    <h2 className="kof-header text-2xl">BATTLE_RECORDS</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                        {[...Array(12)].map((_, i) => (
+                                            <div key={i} className="archive-item group cursor-pointer neo-box" style={{borderColor: i % 2 === 0 ? 'var(--neo-blue)' : 'var(--neo-orange)'}}>
+                                                <div className="absolute inset-0 bg-black/60 group-hover:bg-transparent flex flex-col items-center justify-center p-2 text-center">
+                                                    <div className="stats-text text-[8px] text-white">REPLAY</div>
+                                                    <div className="stats-text text-[6px] text-[var(--neo-yellow)] mt-2">ROM_DAT_{100+i}</div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PROFILE VIEW */}
+                            {view === 'profile' && (
+                                <div className="max-w-2xl mx-auto neo-box p-10 grid grid-cols-1 md:grid-cols-2 gap-10" style={{borderColor: 'var(--neo-green)'}}>
+                                    <div className="flex flex-col items-center gap-6">
+                                        <div className="avatar-frame">
+                                            <img src={profile.avatar} className="pixelated w-full h-full" />
+                                        </div>
+                                        <button className="pixel-btn pixel-btn-green w-full p-3 text-[8px]">CHANGE_BIOS</button>
+                                    </div>
+                                    <div className="space-y-6">
+                                        <h2 className="kof-header text-2xl text-[var(--neo-green)]">PILOT_ID</h2>
+                                        <div>
+                                            <p className="stats-text text-[var(--neo-blue)] mb-2">USER_TAG</p>
+                                            <p className="stats-text text-xl">{profile.username}</p>
+                                        </div>
+                                        <div>
+                                            <p className="stats-text text-[var(--neo-orange)] mb-2">LAST_LOCATION</p>
+                                            <p className="stats-text text-xl">{profile.location}</p>
+                                        </div>
+                                        <div className="pt-4 border-t border-zinc-800">
+                                            <p className="stats-text text-[var(--neo-red)] mb-2">PWR_LEVEL</p>
+                                            <div className="lifebar w-full h-4"><div className="lifebar-fill" style={{width: '88%'}}></div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SETTINGS VIEW */}
+                            {view === 'settings' && (
+                                <div className="max-w-xl mx-auto neo-box p-10 space-y-10" style={{borderColor: 'var(--neo-yellow)'}}>
+                                    <h2 className="kof-header text-2xl text-[var(--neo-yellow)]">DIP_SWITCHES</h2>
+                                    <div className="space-y-8">
+                                        <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                                            <span className="stats-text">VISUAL_MODE</span>
+                                            <button onClick={toggleTheme} className="pixel-btn pixel-btn-orange px-4 py-2 text-[8px]">
+                                                {theme === 'dark' ? 'TERMINAL' : 'OFFICIAL'}
+                                            </button>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                                            <span className="stats-text">CRT_FILTER</span>
+                                            <div className="w-12 h-6 bg-black border-2 border-[var(--neo-green)] p-1 flex items-center justify-end">
+                                                <div className="w-4 h-full bg-[var(--neo-green)]"></div>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                                            <span className="stats-text">BGM_VOL</span>
+                                            <input type="range" className="accent-[var(--neo-orange)] w-32" />
+                                        </div>
+                                        <button onClick={() => setView('auth')} className="pixel-btn pixel-btn-red w-full p-5 text-white mt-4 shadow-[5px_5px_0_#000]">SHUTDOWN_SYSTEM</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
-
-                    <div className="fixed bottom-4 left-4 text-[8px] opacity-40">
-                        INREALLIFE // UPLINK_STABLE // 2026
-                    </div>
                 </div>
             );
         }
