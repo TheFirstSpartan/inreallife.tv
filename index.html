@@ -17,7 +17,7 @@
 
     <style>
         :root {
-            /* NEO GEO OFFICIAL PALETTE */
+            /* NEO GEO OFFICIAL PALETTE - KOF 2002 STYLE */
             --neo-blue: #0056b3;
             --neo-red: #ef4444;
             --neo-green: #39ff14;
@@ -66,7 +66,6 @@
             position: relative;
         }
 
-        /* Decorative Corners */
         .neo-box::before {
             content: '';
             position: absolute;
@@ -220,10 +219,16 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // Securely handle potentially undefined variables
+        const firebaseConfigRaw = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const firebaseConfig = JSON.parse(firebaseConfigRaw);
+        
+        if (firebaseConfig.apiKey && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        const auth = firebase.apps.length ? firebase.auth() : null;
+        const db = firebase.apps.length ? firebase.firestore() : null;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-uplink';
 
         function App() {
@@ -261,6 +266,7 @@
             }, [theme]);
 
             useEffect(() => {
+                if (!auth) return;
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -269,7 +275,7 @@
                             await auth.signInAnonymously();
                         }
                     } catch (e) {
-                        console.error("Auth failed", e);
+                        console.error("Auth connection bypassed", e);
                     }
                 };
                 initAuth();
@@ -280,7 +286,7 @@
             const toggleTheme = () => {
                 const newTheme = theme === 'dark' ? 'light' : 'dark';
                 setTheme(newTheme);
-                showToast(`THEME_SET: ${newTheme.toUpperCase()}`);
+                showToast("THEME_SET: " + newTheme.toUpperCase());
             };
 
             const showToast = (msg) => {
@@ -309,8 +315,8 @@
 
             const handleStart = (e) => {
                 if (isBooting) return;
-                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+                const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
                 const rect = floppyRef.current.getBoundingClientRect();
                 dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
                 setIsDragging(true);
@@ -319,10 +325,9 @@
 
             const handleMove = (e) => {
                 if (!isDragging) return;
-                const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-                const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+                const clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+                const clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
                 
-                // Allow movement within window bounds
                 setDragPos({ 
                     x: clientX - dragOffset.current.x, 
                     y: clientY - dragOffset.current.y 
@@ -334,8 +339,7 @@
                     setIsOverTarget(isInside);
                 }
                 
-                // Prevent scrolling while dragging on touch
-                if (e.type.includes('touch')) e.preventDefault();
+                if (e.touches) e.preventDefault();
             };
 
             const handleEnd = () => {
@@ -382,8 +386,8 @@
                                 className="floppy-disk"
                                 style={{ 
                                     position: isDragging ? 'fixed' : 'relative',
-                                    left: isDragging ? dragPos.x : 0,
-                                    top: isDragging ? dragPos.y : 0,
+                                    left: isDragging ? dragPos.x + 'px' : '0',
+                                    top: isDragging ? dragPos.y + 'px' : '0',
                                     opacity: isBooting ? 0 : 1,
                                     zIndex: 500,
                                     pointerEvents: isBooting ? 'none' : 'auto',
@@ -402,13 +406,13 @@
 
                             <div 
                                 ref={targetRef}
-                                className={`rainbow-box-container p-10 w-full max-w-md space-y-6 ${isOverTarget ? 'drag-over' : ''}`}
+                                className={"rainbow-box-container p-10 w-full max-w-md space-y-6 " + (isOverTarget ? 'drag-over' : '')}
                             >
                                 <p className="stats-text text-lg italic text-[var(--neo-yellow)] text-center">MVS SYSTEM_START</p>
                                 
                                 {isBooting ? (
                                     <div className="w-full bg-zinc-900 h-10 border-4 border-white p-1 overflow-hidden">
-                                        <div className="h-full bg-[var(--neo-green)] transition-all duration-75" style={{ width: `${bootProgress}%` }}></div>
+                                        <div className="h-full bg-[var(--neo-green)] transition-all duration-75" style={{ width: bootProgress + '%' }}></div>
                                         <div className="stats-text text-[8px] mt-4 text-center text-white">PROCESING_ROM... {Math.round(bootProgress)}%</div>
                                     </div>
                                 ) : (
@@ -423,14 +427,13 @@
 
                     {view !== 'auth' && (
                         <div className="space-y-6 animate-in fade-in duration-500">
-                            {/* MULTI-COLOR NAVIGATION */}
                             <div className="neo-box p-4 flex flex-wrap gap-2 md:gap-4 items-center justify-between">
                                 <div className="flex flex-wrap gap-2 items-center">
-                                    <button onClick={() => setView('discover')} className={`pixel-btn pixel-btn-blue px-4 py-3 text-[8px] md:text-[10px] ${view === 'discover' ? 'nav-active' : ''}`}>DISCOVER</button>
-                                    <button onClick={() => setView('channel')} className={`pixel-btn pixel-btn-red px-4 py-3 text-[8px] md:text-[10px] ${view === 'channel' ? 'nav-active' : ''}`}>CHANNEL</button>
-                                    <button onClick={() => setView('archive')} className={`pixel-btn pixel-btn-orange px-4 py-3 text-[8px] md:text-[10px] ${view === 'archive' ? 'nav-active' : ''}`}>ARCHIVE</button>
-                                    <button onClick={() => setView('profile')} className={`pixel-btn pixel-btn-green px-4 py-3 text-[8px] md:text-[10px] ${view === 'profile' ? 'nav-active' : ''}`}>PROFILE</button>
-                                    <button onClick={() => setView('settings')} className={`pixel-btn pixel-btn-yellow px-4 py-3 text-[8px] md:text-[10px] ${view === 'settings' ? 'nav-active' : ''}`}>SETTINGS</button>
+                                    <button onClick={() => setView('discover')} className={"pixel-btn pixel-btn-blue px-4 py-3 text-[8px] md:text-[10px] " + (view === 'discover' ? 'nav-active' : '')}>DISCOVER</button>
+                                    <button onClick={() => setView('channel')} className={"pixel-btn pixel-btn-red px-4 py-3 text-[8px] md:text-[10px] " + (view === 'channel' ? 'nav-active' : '')}>CHANNEL</button>
+                                    <button onClick={() => setView('archive')} className={"pixel-btn pixel-btn-orange px-4 py-3 text-[8px] md:text-[10px] " + (view === 'archive' ? 'nav-active' : '')}>ARCHIVE</button>
+                                    <button onClick={() => setView('profile')} className={"pixel-btn pixel-btn-green px-4 py-3 text-[8px] md:text-[10px] " + (view === 'profile' ? 'nav-active' : '')}>PROFILE</button>
+                                    <button onClick={() => setView('settings')} className={"pixel-btn pixel-btn-yellow px-4 py-3 text-[8px] md:text-[10px] " + (view === 'settings' ? 'nav-active' : '')}>SETTINGS</button>
                                     
                                     <button onClick={toggleTheme} className="pixel-btn pixel-btn-orange p-3 text-[12px] ml-2">
                                         {theme === 'dark' ? '☼' : '☾'}
@@ -441,26 +444,24 @@
                                 </div>
                             </div>
 
-                            {/* DISCOVER VIEW */}
                             {view === 'discover' && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                     {liveUplinks.map(uplink => (
-                                        <div key={uplink.id} className="neo-box p-0 overflow-hidden group hover:scale-[1.02] transition-transform" style={{borderColor: `var(--neo-${uplink.color})`}}>
+                                        <div key={uplink.id} className="neo-box p-0 overflow-hidden group hover:scale-[1.02] transition-transform" style={{borderColor: 'var(--neo-' + uplink.color + ')'}}>
                                             <div className="relative aspect-video bg-zinc-900 overflow-hidden">
                                                 <img src={uplink.thumb} className="pixelated w-full h-full object-cover" />
                                                 <div className="live-tag">LIVE</div>
                                             </div>
                                             <div className="p-4 flex flex-col gap-3">
-                                                <div className="stats-text text-[9px] truncate" style={{color: `var(--neo-${uplink.color})`}}>{uplink.name}</div>
+                                                <div className="stats-text text-[9px] truncate" style={{color: 'var(--neo-' + uplink.color + ')'}}>{uplink.name}</div>
                                                 <div className="stats-text text-[7px] opacity-70 uppercase">{uplink.viewers} WATCHERS</div>
-                                                <button onClick={() => setView('channel')} className={`pixel-btn pixel-btn-${uplink.color} w-full py-2 text-[8px]`}>CONNECT_LINK</button>
+                                                <button onClick={() => setView('channel')} className={"pixel-btn pixel-btn-" + uplink.color + " w-full py-2 text-[8px]"}>CONNECT_LINK</button>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
 
-                            {/* CHANNEL VIEW */}
                             {view === 'channel' && (
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                     <div className="lg:col-span-2 space-y-6">
@@ -495,7 +496,6 @@
                                 </div>
                             )}
 
-                            {/* ARCHIVE VIEW */}
                             {view === 'archive' && (
                                 <div className="space-y-6">
                                     <h2 className="kof-header text-2xl">BATTLE_RECORDS</h2>
@@ -512,7 +512,6 @@
                                 </div>
                             )}
 
-                            {/* PROFILE VIEW */}
                             {view === 'profile' && (
                                 <div className="max-w-2xl mx-auto neo-box p-10 grid grid-cols-1 md:grid-cols-2 gap-10" style={{borderColor: 'var(--neo-green)'}}>
                                     <div className="flex flex-col items-center gap-6">
@@ -539,7 +538,6 @@
                                 </div>
                             )}
 
-                            {/* SETTINGS VIEW */}
                             {view === 'settings' && (
                                 <div className="max-w-xl mx-auto neo-box p-10 space-y-10" style={{borderColor: 'var(--neo-yellow)'}}>
                                     <h2 className="kof-header text-2xl text-[var(--neo-yellow)]">DIP_SWITCHES</h2>
