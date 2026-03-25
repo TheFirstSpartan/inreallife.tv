@@ -48,7 +48,6 @@ const neoStyles = `
       text-shadow: 3px 3px var(--neo-red);
   }
 
-  /* --- FLOPPY DISK VISUAL --- */
   .floppy-disk {
     width: 100px;
     height: 100px;
@@ -193,14 +192,16 @@ export default function App() {
 
   useEffect(() => {
     const initAuth = async () => {
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        await signInWithCustomToken(auth, __initial_auth_token);
-      } else {
-        await signInAnonymously(auth);
-      }
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) { console.error("Firebase Auth Error", e); }
     };
     initAuth();
-    return onAuthStateChanged(auth, setUser);
+    return onAuthStateChanged(auth, (u) => setUser(u));
   }, []);
 
   const handleDrag = (e) => {
@@ -252,11 +253,11 @@ export default function App() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
       if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) { console.warn("Cam Error"); }
+    } catch (err) { console.warn("Cam Error", err); }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4 relative">
+    <div className="min-h-screen flex flex-col items-center p-4 relative bg-black text-white">
       <style>{neoStyles}</style>
       <div className="scanlines" />
 
@@ -267,7 +268,6 @@ export default function App() {
             <div className="stats-text text-white/40 mt-2">UPLINK SYSTEM v2002</div>
           </div>
 
-          {/* DRAGGABLE FLOPPY */}
           <div 
             onMouseDown={() => setDrag(d => ({ ...d, active: true }))}
             onTouchStart={() => setDrag(d => ({ ...d, active: true }))}
@@ -314,8 +314,8 @@ export default function App() {
         {view === 'dashboard' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {CHARACTERS.map(char => (
-              <div key={char.id} className="char-card" style={{ borderColor: char.color }}>
-                <div className="char-portrait">
+              <div key={char.id} className="char-card border-[3px]" style={{ borderColor: char.color, background: 'black' }}>
+                <div className="char-portrait aspect-square relative overflow-hidden border-b-2 border-zinc-800">
                   <div className="absolute top-2 left-2 bg-red-600 text-white text-[5px] px-1 font-bold z-10">LIVE</div>
                   <img src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${char.img}`} className="w-full h-full pixelated object-cover" alt={char.name} />
                 </div>
