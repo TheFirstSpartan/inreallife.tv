@@ -1,405 +1,451 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-
-// --- NEO GEO / KOF 2002 STYLING ---
-const neoStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap');
-
-  :root {
-    --neo-blue: #00a2ff;
-    --neo-red: #ff3131;
-    --neo-green: #39ff14;
-    --neo-yellow: #facc15;
-    --neo-orange: #ff8c00;
-    --bg-color: #050505;
-  }
-
-  body {
-    background-color: var(--bg-color);
-    background-image: radial-gradient(circle at center, #111 0%, #000 100%);
-    color: white;
-    font-family: 'Courier Prime', monospace;
-    overflow-x: hidden;
-    margin: 0;
-  }
-
-  @keyframes rainbow-glow {
-      0%, 100% { border-color: var(--neo-red); box-shadow: 0 0 15px var(--neo-red); }
-      33% { border-color: var(--neo-yellow); box-shadow: 0 0 15px var(--neo-yellow); }
-      66% { border-color: var(--neo-green); box-shadow: 0 0 15px var(--neo-green); }
-  }
-
-  .title-container {
-      border: 3px solid var(--neo-red);
-      padding: 20px 40px;
-      animation: rainbow-glow 3s linear infinite;
-      background: black;
-      margin-bottom: 2rem;
-  }
-
-  .kof-title {
-      font-family: 'Press Start 2P', cursive;
-      font-size: clamp(14px, 4vw, 28px);
-      font-style: italic;
-      letter-spacing: 2px;
-      color: var(--neo-yellow);
-      text-shadow: 3px 3px var(--neo-red);
-  }
-
-  .floppy-disk {
-    width: 100px;
-    height: 100px;
-    background: #1a1a1a;
-    border-radius: 4px;
-    border-top-right-radius: 15px;
-    position: relative;
-    box-shadow: 5px 5px 0px rgba(0,0,0,0.5);
-    cursor: grab;
-    z-index: 100;
-  }
-  .floppy-disk:active { cursor: grabbing; scale: 1.05; }
-  
-  .shutter {
-    position: absolute;
-    top: 5px;
-    left: 20px;
-    width: 50px;
-    height: 35px;
-    background: #444;
-    border-radius: 2px;
-  }
-  .shutter::after {
-    content: '';
-    position: absolute;
-    left: 10px; top: 10px;
-    width: 5px; height: 15px;
-    background: #222;
-  }
-
-  .disk-label {
-    position: absolute;
-    bottom: 5px;
-    left: 8px;
-    right: 8px;
-    height: 45px;
-    background: var(--neo-orange);
-    border-radius: 2px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 2px;
-  }
-
-  .label-white-strip {
-    background: white;
-    width: 90%;
-    height: 15px;
-    margin-top: 5px;
-    color: black;
-    font-size: 6px;
-    font-family: 'Press Start 2P';
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .dash-nav-container {
-      border: 2px solid var(--neo-blue);
-      background: rgba(0, 0, 0, 0.95);
-      padding: 4px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      max-width: 900px;
-  }
-
-  .nav-item {
-      font-family: 'Press Start 2P', cursive;
-      font-size: 8px;
-      padding: 10px;
-      cursor: pointer;
-      text-transform: uppercase;
-      border: 2px solid transparent;
-      white-space: nowrap;
-  }
-
-  .nav-item.active { border-color: white; background: #222; }
-
-  .neo-frame {
-      background: black;
-      position: relative;
-      border: 3px solid;
-  }
-
-  .pixel-btn { 
-    border: 1px solid; 
-    background: transparent; 
-    font-family: 'Press Start 2P', cursive; 
-    font-size: 8px; 
-    padding: 10px; 
-    cursor: pointer;
-    transition: 0.1s;
-  }
-  .pixel-btn:hover { background: white; color: black !important; }
-
-  .scanlines {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-      background-size: 100% 4px;
-      pointer-events: none;
-      z-index: 9999;
-  }
-
-  .stats-text { font-family: 'Press Start 2P', cursive; font-size: 8px; text-transform: uppercase; }
-  .pixelated { image-rendering: pixelated; }
-
-  .mvs-slot {
-    border: 3px solid var(--neo-yellow);
-    background: #0a0a0a;
-    width: 300px;
-    padding: 40px 20px;
-    text-align: center;
-    box-shadow: inset 0 0 20px rgba(250, 204, 21, 0.2);
-  }
-`;
-
-const CHARACTERS = [
-  { id: 1, name: 'TERRY_BOGARD', color: 'var(--neo-blue)', watchers: '1,204', img: 'Terry', bio: 'Legendary Hungry Wolf.' },
-  { id: 2, name: 'MAI_SHIRANUI', color: 'var(--neo-red)', watchers: '852', img: 'Mai', bio: 'The Shiranui Style successor.' },
-  { id: 3, name: 'IORI_YAGAMI', color: 'var(--neo-orange)', watchers: '2,301', img: 'Iori', bio: 'Heir of the Yagami clan.' },
-  { id: 4, name: 'K_DASH', color: 'var(--neo-green)', watchers: '542', img: 'K', bio: 'A former NESTS agent.' }
-];
-
-const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [view, setView] = useState('login');
-  const [boot, setBoot] = useState({ active: false, progress: 0 });
-  const [drag, setDrag] = useState({ active: false, x: 0, y: 0, isOver: false });
-  const [profileImg, setProfileImg] = useState(null);
-
-  const targetRef = useRef(null);
-  const videoRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (e) { console.error("Firebase Auth Error", e); }
-    };
-    initAuth();
-    return onAuthStateChanged(auth, (u) => setUser(u));
-  }, []);
-
-  const handleDrag = (e) => {
-    if (!drag.active) return;
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InRealLife Uplink // NEO GEO MVS</title>
+    <!-- Tailwind CSS for Layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and Babel (to run JSX in browser) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    let isOver = false;
-    if (targetRef.current) {
-      const rect = targetRef.current.getBoundingClientRect();
-      isOver = clientX > rect.left && clientX < rect.right && clientY > rect.top && clientY < rect.bottom;
-    }
-    setDrag(prev => ({ ...prev, x: clientX - 50, y: clientY - 50, isOver }));
-  };
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Press+Start+2P&display=swap');
 
-  const endDrag = () => {
-    if (!drag.active) return;
-    if (drag.isOver) {
-      setBoot({ active: true, progress: 0 });
-      let p = 0;
-      const interval = setInterval(() => {
-        p += Math.random() * 20;
-        if (p >= 100) {
-          clearInterval(interval);
-          setView('dashboard');
-          setBoot({ active: false, progress: 100 });
-        } else setBoot(b => ({ ...b, progress: p }));
-      }, 80);
-    }
-    setDrag({ active: false, x: 0, y: 0, isOver: false });
-  };
+        :root {
+            --neo-blue: #00a2ff;
+            --neo-red: #ff3131;
+            --neo-green: #39ff14;
+            --neo-yellow: #facc15;
+            --neo-orange: #ff8c00;
+            --bg-color: #050505;
+        }
 
-  useEffect(() => {
-    if (drag.active) {
-      window.addEventListener('mousemove', handleDrag);
-      window.addEventListener('mouseup', endDrag);
-      window.addEventListener('touchmove', handleDrag, { passive: false });
-      window.addEventListener('touchend', endDrag);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handleDrag);
-      window.removeEventListener('mouseup', endDrag);
-      window.removeEventListener('touchmove', handleDrag);
-      window.removeEventListener('touchend', endDrag);
-    };
-  }, [drag.active, drag.isOver]);
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at center, #111 0%, #000 100%);
+            color: white;
+            font-family: 'Courier Prime', monospace;
+            overflow-x: hidden;
+            margin: 0;
+        }
 
-  const initCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (err) { console.warn("Cam Error", err); }
-  };
+        @keyframes rainbow-glow {
+            0%, 100% { border-color: var(--neo-red); box-shadow: 0 0 15px var(--neo-red); }
+            33% { border-color: var(--neo-yellow); box-shadow: 0 0 15px var(--neo-yellow); }
+            66% { border-color: var(--neo-green); box-shadow: 0 0 15px var(--neo-green); }
+        }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center p-4 relative bg-black text-white">
-      <style>{neoStyles}</style>
-      <div className="scanlines" />
+        .title-container {
+            border: 3px solid var(--neo-red);
+            padding: 20px 40px;
+            animation: rainbow-glow 3s linear infinite;
+            background: black;
+            margin-bottom: 2rem;
+        }
 
-      {view === 'login' && (
-        <div className="flex-1 flex flex-col items-center justify-center space-y-16">
-          <div className="title-container text-center">
-            <h1 className="kof-title">I N&nbsp;&nbsp;R E A L&nbsp;&nbsp;L I F E</h1>
-            <div className="stats-text text-white/40 mt-2">UPLINK SYSTEM v2002</div>
-          </div>
+        .kof-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: clamp(14px, 4vw, 28px);
+            font-style: italic;
+            letter-spacing: 2px;
+            color: var(--neo-yellow);
+            text-shadow: 3px 3px var(--neo-red);
+        }
 
-          <div 
-            onMouseDown={() => setDrag(d => ({ ...d, active: true }))}
-            onTouchStart={() => setDrag(d => ({ ...d, active: true }))}
-            className="floppy-disk" 
-            style={{ 
-              position: drag.active ? 'fixed' : 'relative', 
-              left: drag.active ? drag.x : 0, 
-              top: drag.active ? drag.y : 0,
-              touchAction: 'none'
-            }}
-          >
-            <div className="shutter" />
-            <div className="disk-label">
-              <div className="stats-text text-[5px] text-white/50">NEO-GEO MVS</div>
-              <div className="label-white-strip">BOOT_DISK</div>
-            </div>
-          </div>
+        .floppy-disk {
+            width: 100px;
+            height: 100px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            border-top-right-radius: 15px;
+            position: relative;
+            box-shadow: 5px 5px 0px rgba(0,0,0,0.5);
+            cursor: grab;
+            z-index: 100;
+        }
+        .floppy-disk:active { cursor: grabbing; scale: 1.05; }
+        
+        .shutter {
+            position: absolute;
+            top: 5px;
+            left: 20px;
+            width: 50px;
+            height: 35px;
+            background: #444;
+            border-radius: 2px;
+        }
+        .shutter::after {
+            content: '';
+            position: absolute;
+            left: 10px; top: 10px;
+            width: 5px; height: 15px;
+            background: #222;
+        }
 
-          <div className="mvs-slot">
-            <h2 className="stats-text text-[var(--neo-yellow)] mb-6">MVS_CARTRIDGE_SLOT</h2>
-            <div ref={targetRef} className={`border-2 border-dashed p-10 transition-colors ${drag.isOver ? 'border-white bg-[var(--neo-blue)]/20' : 'border-[var(--neo-blue)]'}`}>
-              <div className="stats-text text-[7px] text-[var(--neo-blue)]">
-                {boot.active ? `BOOTING... ${Math.round(boot.progress)}%` : 'INSERT_UPLINK_DISK'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        .disk-label {
+            position: absolute;
+            bottom: 5px;
+            left: 8px;
+            right: 8px;
+            height: 45px;
+            background: var(--neo-orange);
+            border-radius: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+        }
 
-      {view !== 'login' && (
-        <div className="dash-nav-container mt-4">
-          <div className="flex gap-1 overflow-x-auto">
-            {['dashboard', 'channel', 'archive', 'profile', 'settings'].map(v => (
-              <div key={v} onClick={() => setView(v)} className={`nav-item ${view === v ? 'active' : ''}`} style={{ color: v === 'channel' ? 'var(--neo-red)' : v === 'profile' ? 'var(--neo-green)' : 'var(--neo-yellow)' }}>
-                {v}
-              </div>
-            ))}
-          </div>
-          <div className="stats-text text-[var(--neo-yellow)] hidden sm:block pr-4">2002_CREDITS</div>
-        </div>
-      )}
+        .label-white-strip {
+            background: white;
+            width: 90%;
+            height: 15px;
+            margin-top: 5px;
+            color: black;
+            font-size: 6px;
+            font-family: 'Press Start 2P';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-      <main className="w-full max-w-[900px] mt-8 flex-1">
-        {view === 'dashboard' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {CHARACTERS.map(char => (
-              <div key={char.id} className="char-card border-[3px]" style={{ borderColor: char.color, background: 'black' }}>
-                <div className="char-portrait aspect-square relative overflow-hidden border-b-2 border-zinc-800">
-                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[5px] px-1 font-bold z-10">LIVE</div>
-                  <img src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${char.img}`} className="w-full h-full pixelated object-cover" alt={char.name} />
+        .dash-nav-container {
+            border: 2px solid var(--neo-blue);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .nav-item {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 8px;
+            padding: 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            border: 2px solid transparent;
+            white-space: nowrap;
+        }
+
+        .nav-item.active { border-color: white; background: #222; }
+
+        .neo-frame {
+            background: black;
+            position: relative;
+            border: 3px solid;
+        }
+
+        .pixel-btn { 
+            border: 1px solid; 
+            background: transparent; 
+            font-family: 'Press Start 2P', cursive; 
+            font-size: 8px; 
+            padding: 10px; 
+            cursor: pointer;
+            transition: 0.1s;
+        }
+        .pixel-btn:hover { background: white; color: black !important; }
+
+        .scanlines {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .stats-text { font-family: 'Press Start 2P', cursive; font-size: 8px; text-transform: uppercase; }
+        .pixelated { image-rendering: pixelated; }
+
+        .mvs-slot {
+            border: 3px solid var(--neo-yellow);
+            background: #0a0a0a;
+            width: 300px;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: inset 0 0 20px rgba(250, 204, 21, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Firebase SDK via CDN -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        
+        // This makes these available to the Babel-transpiled script below
+        window.firebaseModules = { initializeApp, getAuth, signInAnonymously, onAuthStateChanged };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const CHARACTERS = [
+            { id: 1, name: 'TERRY_BOGARD', color: 'var(--neo-blue)', watchers: '1,204', img: 'Terry', bio: 'Legendary Hungry Wolf.' },
+            { id: 2, name: 'MAI_SHIRANUI', color: 'var(--neo-red)', watchers: '852', img: 'Mai', bio: 'The Shiranui Style successor.' },
+            { id: 3, name: 'IORI_YAGAMI', color: 'var(--neo-orange)', watchers: '2,301', img: 'Iori', bio: 'Heir of the Yagami clan.' },
+            { id: 4, name: 'K_DASH', color: 'var(--neo-green)', watchers: '542', img: 'K', bio: 'A former NESTS agent.' }
+        ];
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [view, setView] = useState('login');
+            const [boot, setBoot] = useState({ active: false, progress: 0 });
+            const [drag, setDrag] = useState({ active: false, x: 0, y: 0, isOver: false });
+            const [profileImg, setProfileImg] = useState(null);
+
+            const targetRef = useRef(null);
+            const videoRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            // Initialize Firebase when ready
+            useEffect(() => {
+                const initFirebase = async () => {
+                    if (window.firebaseModules) {
+                        const { initializeApp, getAuth, signInAnonymously, onAuthStateChanged } = window.firebaseModules;
+                        
+                        // Check environment variables or globals for config
+                        const configStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+                        let firebaseConfig = null;
+                        
+                        if (configStr) {
+                            try {
+                                firebaseConfig = JSON.parse(configStr);
+                            } catch (e) {
+                                console.warn("Could not parse firebase config global.");
+                            }
+                        }
+
+                        // Guard against empty config which causes the auth/invalid-api-key error
+                        if (firebaseConfig && firebaseConfig.apiKey) {
+                            try {
+                                const app = initializeApp(firebaseConfig);
+                                const auth = getAuth(app);
+                                signInAnonymously(auth);
+                                onAuthStateChanged(auth, (u) => setUser(u));
+                            } catch (e) { 
+                                console.error("Firebase Auth Error", e); 
+                            }
+                        } else {
+                            console.log("Firebase config missing or invalid. Running in local/guest mode.");
+                        }
+                    }
+                };
+                
+                initFirebase();
+            }, []);
+
+            const handleDrag = (e) => {
+                if (!drag.active) return;
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                
+                let isOver = false;
+                if (targetRef.current) {
+                    const rect = targetRef.current.getBoundingClientRect();
+                    isOver = clientX > rect.left && clientX < rect.right && clientY > rect.top && clientY < rect.bottom;
+                }
+                setDrag(prev => ({ ...prev, x: clientX - 50, y: clientY - 50, isOver }));
+            };
+
+            const endDrag = () => {
+                if (!drag.active) return;
+                if (drag.isOver) {
+                    setBoot({ active: true, progress: 0 });
+                    let p = 0;
+                    const interval = setInterval(() => {
+                        p += Math.random() * 20;
+                        if (p >= 100) {
+                            clearInterval(interval);
+                            setView('dashboard');
+                            setBoot({ active: false, progress: 100 });
+                        } else setBoot(b => ({ ...b, progress: p }));
+                    }, 80);
+                }
+                setDrag({ active: false, x: 0, y: 0, isOver: false });
+            };
+
+            useEffect(() => {
+                if (drag.active) {
+                    window.addEventListener('mousemove', handleDrag);
+                    window.addEventListener('mouseup', endDrag);
+                    window.addEventListener('touchmove', handleDrag, { passive: false });
+                    window.addEventListener('touchend', endDrag);
+                }
+                return () => {
+                    window.removeEventListener('mousemove', handleDrag);
+                    window.removeEventListener('mouseup', endDrag);
+                    window.removeEventListener('touchmove', handleDrag);
+                    window.removeEventListener('touchend', endDrag);
+                };
+            }, [drag.active, drag.isOver]);
+
+            const initCamera = async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    if (videoRef.current) videoRef.current.srcObject = stream;
+                } catch (err) { console.warn("Cam Error", err); }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center p-4 relative bg-black text-white">
+                    <div className="scanlines" />
+
+                    {view === 'login' && (
+                        <div className="flex-1 flex flex-col items-center justify-center space-y-16">
+                            <div className="title-container text-center">
+                                <h1 className="kof-title">I N&nbsp;&nbsp;R E A L&nbsp;&nbsp;L I F E</h1>
+                                <div className="stats-text text-white/40 mt-2">UPLINK SYSTEM v2002</div>
+                            </div>
+
+                            <div 
+                                onMouseDown={() => setDrag(d => ({ ...d, active: true }))}
+                                onTouchStart={() => setDrag(d => ({ ...d, active: true }))}
+                                className="floppy-disk" 
+                                style={{ 
+                                    position: drag.active ? 'fixed' : 'relative', 
+                                    left: drag.active ? drag.x : 0, 
+                                    top: drag.active ? drag.y : 0,
+                                    touchAction: 'none'
+                                }}
+                            >
+                                <div className="shutter" />
+                                <div className="disk-label">
+                                    <div className="stats-text text-[5px] text-white/50">NEO-GEO MVS</div>
+                                    <div className="label-white-strip">BOOT_DISK</div>
+                                </div>
+                            </div>
+
+                            <div className="mvs-slot">
+                                <h2 className="stats-text text-[var(--neo-yellow)] mb-6">MVS_CARTRIDGE_SLOT</h2>
+                                <div ref={targetRef} className={`border-2 border-dashed p-10 transition-colors ${drag.isOver ? 'border-white bg-[var(--neo-blue)]/20' : 'border-[var(--neo-blue)]'}`}>
+                                    <div className="stats-text text-[7px] text-[var(--neo-blue)]">
+                                        {boot.active ? `BOOTING... ${Math.round(boot.progress)}%` : 'INSERT_UPLINK_DISK'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {view !== 'login' && (
+                        <div className="dash-nav-container mt-4">
+                            <div className="flex gap-1 overflow-x-auto">
+                                {['dashboard', 'channel', 'archive', 'profile', 'settings'].map(v => (
+                                    <div key={v} onClick={() => setView(v)} className={`nav-item ${view === v ? 'active' : ''}`} style={{ color: v === 'channel' ? 'var(--neo-red)' : v === 'profile' ? 'var(--neo-green)' : 'var(--neo-yellow)' }}>
+                                        {v}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="stats-text text-[var(--neo-yellow)] hidden sm:block pr-4">2002_CREDITS</div>
+                        </div>
+                    )}
+
+                    <main className="w-full max-w-[900px] mt-8 flex-1">
+                        {view === 'dashboard' && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {CHARACTERS.map(char => (
+                                    <div key={char.id} className="char-card border-[3px]" style={{ borderColor: char.color, background: 'black' }}>
+                                        <div className="char-portrait aspect-square relative overflow-hidden border-b-2 border-zinc-800">
+                                            <div className="absolute top-2 left-2 bg-red-600 text-white text-[5px] px-1 font-bold z-10">LIVE</div>
+                                            <img src={`https://api.dicebear.com/7.x/pixel-art/svg?seed=${char.img}`} className="w-full h-full pixelated object-cover" alt={char.name} />
+                                        </div>
+                                        <div className="p-3 space-y-2">
+                                            <div className="stats-text text-[9px]" style={{ color: char.color }}>{char.name}</div>
+                                            <div className="stats-text text-[6px] text-zinc-500">{char.bio}</div>
+                                            <button className="pixel-btn w-full" style={{ borderColor: char.color, color: char.color }}>CONNECT</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {view === 'channel' && (
+                            <div className="flex flex-col lg:flex-row gap-4 h-[500px]">
+                                <div className="flex-1 flex flex-col gap-4">
+                                    <div className="neo-frame flex-1 bg-zinc-900 border-[var(--neo-red)]">
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                                        <div className="absolute top-4 right-4 stats-text text-[var(--neo-red)] animate-pulse">REC ●</div>
+                                    </div>
+                                    <div className="neo-frame p-4 flex justify-between items-center border-[var(--neo-blue)]">
+                                        <button onClick={initCamera} className="pixel-btn text-[var(--neo-blue)]">SYNC_LENS</button>
+                                        <div className="stats-text text-[var(--neo-orange)]">SIGNAL_STRENGTH: 94%</div>
+                                    </div>
+                                </div>
+                                <div className="w-full lg:w-[250px] neo-frame p-4 border-[var(--neo-orange)] overflow-y-auto">
+                                    <div className="stats-text text-[var(--neo-orange)] mb-4 border-b border-[var(--neo-orange)] pb-1">COMMS_LOG</div>
+                                    <div className="stats-text text-[7px] space-y-3 text-zinc-400">
+                                        <p><span className="text-[var(--neo-blue)]">[SYS]:</span> Ready for battle.</p>
+                                        <p><span className="text-[var(--neo-red)]">IORI:</span> COME ON!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'profile' && (
+                            <div className="neo-frame p-8 flex flex-col md:flex-row gap-8 border-[var(--neo-green)]">
+                                <div className="text-center">
+                                    <div className="w-32 h-32 border-4 border-[var(--neo-yellow)] mx-auto overflow-hidden bg-zinc-900 shadow-[0_0_15px_var(--neo-yellow)]">
+                                        <img src={profileImg || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.uid || 'default'}`} className="w-full h-full pixelated" alt="Profile" />
+                                    </div>
+                                    <input type="file" ref={fileInputRef} hidden onChange={e => {
+                                        const f = e.target.files[0];
+                                        if(f){ const r=new FileReader(); r.onload=ev=>setProfileImg(ev.target.result); r.readAsDataURL(f); }
+                                    }} />
+                                    <button onClick={() => fileInputRef.current.click()} className="pixel-btn mt-4 w-full text-[var(--neo-green)]">UPLOAD_BIO_IMG</button>
+                                </div>
+                                <div className="flex-1 space-y-6">
+                                    <h2 className="kof-title text-[20px] text-[var(--neo-green)]">PILOT_ID</h2>
+                                    <div className="stats-text text-[var(--neo-blue)] break-all">{user?.uid || 'GUEST_PILOT'}</div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="stats-text">RANK: <span className="text-[var(--neo-yellow)]">S_CLASS</span></div>
+                                        <div className="stats-text">WINS: <span className="text-[var(--neo-green)]">2002</span></div>
+                                    </div>
+                                    <div className="stats-text text-[var(--neo-red)] mb-1">XP_SYNC</div>
+                                    <div className="w-full h-3 bg-zinc-800 border border-zinc-700 p-[1px]"><div className="h-full bg-gradient-to-r from-[var(--neo-red)] to-[var(--neo-green)]" style={{width: '85%'}} /></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {view === 'settings' && (
+                            <div className="neo-frame p-8 max-w-md mx-auto border-[var(--neo-yellow)]">
+                                <h2 className="stats-text text-[18px] mb-8 text-[var(--neo-red)] italic">DIP_SWITCHES</h2>
+                                {['CRT_SCANLINES', 'AUTO_SYNC', 'CABINET_MODE'].map(opt => (
+                                    <div key={opt} className="flex justify-between items-center mb-6 pb-2 border-b border-zinc-800">
+                                        <div className="stats-text text-[var(--neo-green)]">{opt}</div>
+                                        <div className="w-10 h-5 bg-zinc-800 border border-[var(--neo-green)] relative"><div className="absolute right-1 inset-y-1 w-3 bg-[var(--neo-green)]" /></div>
+                                    </div>
+                                ))}
+                                <button onClick={() => setView('login')} className="pixel-btn w-full border-[var(--neo-red)] text-white mt-4 hover:bg-[var(--neo-red)]">SYSTEM_SHUTDOWN</button>
+                            </div>
+                        )}
+
+                        {view === 'archive' && (
+                            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                                {[...Array(12)].map((_, i) => (
+                                    <div key={i} className="neo-frame aspect-square flex flex-col items-center justify-center p-2 border-zinc-700 hover:border-[var(--neo-orange)] cursor-pointer">
+                                        <div className="stats-text text-[6px]">DAT_{100 + i}</div>
+                                        <div className="w-full h-1 bg-zinc-900 mt-2"><div className="h-full bg-[var(--neo-blue)] w-1/2" /></div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </main>
                 </div>
-                <div className="p-3 space-y-2">
-                  <div className="stats-text text-[9px]" style={{ color: char.color }}>{char.name}</div>
-                  <div className="stats-text text-[6px] text-zinc-500">{char.bio}</div>
-                  <button className="pixel-btn w-full" style={{ borderColor: char.color, color: char.color }}>CONNECT</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            );
+        }
 
-        {view === 'channel' && (
-          <div className="flex flex-col lg:flex-row gap-4 h-[500px]">
-            <div className="flex-1 flex flex-col gap-4">
-              <div className="neo-frame flex-1 bg-zinc-900 border-[var(--neo-red)]">
-                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                <div className="absolute top-4 right-4 stats-text text-[var(--neo-red)] animate-pulse">REC ●</div>
-              </div>
-              <div className="neo-frame p-4 flex justify-between items-center border-[var(--neo-blue)]">
-                <button onClick={initCamera} className="pixel-btn text-[var(--neo-blue)]">SYNC_LENS</button>
-                <div className="stats-text text-[var(--neo-orange)]">SIGNAL_STRENGTH: 94%</div>
-              </div>
-            </div>
-            <div className="w-full lg:w-[250px] neo-frame p-4 border-[var(--neo-orange)] overflow-y-auto">
-              <div className="stats-text text-[var(--neo-orange)] mb-4 border-b border-[var(--neo-orange)] pb-1">COMMS_LOG</div>
-              <div className="stats-text text-[7px] space-y-3 text-zinc-400">
-                <p><span className="text-[var(--neo-blue)]">[SYS]:</span> Ready for battle.</p>
-                <p><span className="text-[var(--neo-red)]">IORI:</span> COME ON!</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {view === 'profile' && (
-          <div className="neo-frame p-8 flex flex-col md:flex-row gap-8 border-[var(--neo-green)]">
-            <div className="text-center">
-              <div className="w-32 h-32 border-4 border-[var(--neo-yellow)] mx-auto overflow-hidden bg-zinc-900 shadow-[0_0_15px_var(--neo-yellow)]">
-                <img src={profileImg || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${user?.uid}`} className="w-full h-full pixelated" alt="Profile" />
-              </div>
-              <input type="file" ref={fileInputRef} hidden onChange={e => {
-                const f = e.target.files[0];
-                if(f){ const r=new FileReader(); r.onload=ev=>setProfileImg(ev.target.result); r.readAsDataURL(f); }
-              }} />
-              <button onClick={() => fileInputRef.current.click()} className="pixel-btn mt-4 w-full text-[var(--neo-green)]">UPLOAD_BIO_IMG</button>
-            </div>
-            <div className="flex-1 space-y-6">
-              <h2 className="kof-title text-[20px] text-[var(--neo-green)]">PILOT_ID</h2>
-              <div className="stats-text text-[var(--neo-blue)] break-all">{user?.uid}</div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="stats-text">RANK: <span className="text-[var(--neo-yellow)]">S_CLASS</span></div>
-                <div className="stats-text">WINS: <span className="text-[var(--neo-green)]">2002</span></div>
-              </div>
-              <div className="stats-text text-[var(--neo-red)] mb-1">XP_SYNC</div>
-              <div className="w-full h-3 bg-zinc-800 border border-zinc-700 p-[1px]"><div className="h-full bg-gradient-to-r from-[var(--neo-red)] to-[var(--neo-green)]" style={{width: '85%'}} /></div>
-            </div>
-          </div>
-        )}
-
-        {view === 'settings' && (
-          <div className="neo-frame p-8 max-w-md mx-auto border-[var(--neo-yellow)]">
-            <h2 className="stats-text text-[18px] mb-8 text-[var(--neo-red)] italic">DIP_SWITCHES</h2>
-            {['CRT_SCANLINES', 'AUTO_SYNC', 'CABINET_MODE'].map(opt => (
-              <div key={opt} className="flex justify-between items-center mb-6 pb-2 border-b border-zinc-800">
-                <div className="stats-text text-[var(--neo-green)]">{opt}</div>
-                <div className="w-10 h-5 bg-zinc-800 border border-[var(--neo-green)] relative"><div className="absolute right-1 inset-y-1 w-3 bg-[var(--neo-green)]" /></div>
-              </div>
-            ))}
-            <button onClick={() => setView('login')} className="pixel-btn w-full border-[var(--neo-red)] text-white mt-4 hover:bg-[var(--neo-red)]">SYSTEM_SHUTDOWN</button>
-          </div>
-        )}
-
-        {view === 'archive' && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-            {[...Array(12)].map((_, i) => (
-              <div key={i} className="neo-frame aspect-square flex flex-col items-center justify-center p-2 border-zinc-700 hover:border-[var(--neo-orange)] cursor-pointer">
-                <div className="stats-text text-[6px]">DAT_{100 + i}</div>
-                <div className="w-full h-1 bg-zinc-900 mt-2"><div className="h-full bg-[var(--neo-blue)] w-1/2" /></div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
